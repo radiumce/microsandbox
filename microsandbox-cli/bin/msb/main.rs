@@ -2,11 +2,10 @@
 mod msb;
 
 use clap::{CommandFactory, Parser};
-use microsandbox_cli::{AnsiStyles, MicrosandboxArgs, MicrosandboxSubcommand, ServerSubcommand};
-use microsandbox_core::{
-    management::{image, orchestra, server},
-    MicrosandboxResult,
+use microsandbox_cli::{
+    AnsiStyles, MicrosandboxArgs, MicrosandboxCliResult, MicrosandboxSubcommand, ServerSubcommand,
 };
+use microsandbox_core::management::{image, orchestra};
 use msb::handlers;
 
 //--------------------------------------------------------------------------------------------------
@@ -20,7 +19,7 @@ const SHELL_SCRIPT: &str = "shell";
 //--------------------------------------------------------------------------------------------------
 
 #[tokio::main]
-async fn main() -> MicrosandboxResult<()> {
+async fn main() -> MicrosandboxCliResult<()> {
     // Parse command line arguments
     let args = MicrosandboxArgs::parse();
 
@@ -200,20 +199,23 @@ async fn main() -> MicrosandboxResult<()> {
         Some(MicrosandboxSubcommand::Server { subcommand }) => match subcommand {
             ServerSubcommand::Start {
                 port,
-                path,
-                disable_default,
-                secure,
+                namespace_dir,
+                dev_mode,
                 key,
                 detach,
             } => {
-                handlers::server_start_subcommand(port, path, disable_default, secure, key, detach)
+                handlers::server_start_subcommand(port, namespace_dir, dev_mode, key, detach)
                     .await?;
             }
             ServerSubcommand::Stop => {
-                server::stop().await?;
+                handlers::server_stop_subcommand().await?;
             }
-            ServerSubcommand::Keygen { expire } => {
-                handlers::server_keygen_subcommand(expire).await?;
+            ServerSubcommand::Keygen {
+                expire,
+                namespace,
+                all_namespaces,
+            } => {
+                handlers::server_keygen_subcommand(expire, namespace, all_namespaces).await?;
             }
         },
         Some(_) => (), // TODO: implement other subcommands

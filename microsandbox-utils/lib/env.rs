@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::{DEFAULT_MICROSANDBOX_HOME, DEFAULT_OCI_REGISTRY};
+use crate::{DEFAULT_MICROSANDBOX_HOME, DEFAULT_OCI_REGISTRY};
 
 //--------------------------------------------------------------------------------------------------
 // Constants
@@ -16,6 +16,9 @@ pub const OCI_REGISTRY_ENV_VAR: &str = "OCI_REGISTRY_DOMAIN";
 
 /// Environment variable for the msbrun binary path
 pub const MSBRUN_EXE_ENV_VAR: &str = "MSBRUN_EXE";
+
+/// Environment variable for the msbserver binary path
+pub const MSBSERVER_EXE_ENV_VAR: &str = "MSBSERVER_EXE";
 
 //--------------------------------------------------------------------------------------------------
 // Functions

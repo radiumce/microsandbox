@@ -647,22 +647,18 @@ pub enum ServerSubcommand {
         port: Option<u16>,
 
         /// Path to the namespace directory
-        #[arg(short, long)]
-        path: Option<PathBuf>,
+        #[arg(short = 'p', long = "path")]
+        namespace_dir: Option<PathBuf>,
 
-        /// Disable default namespace
-        #[arg(long, default_value_t = false)]
-        disable_default: bool,
-
-        /// Make server require a secure API key
-        #[arg(long, default_value_t = false)]
-        secure: bool,
+        /// Run server in development mode
+        #[arg(long = "dev")]
+        dev_mode: bool,
 
         /// Set secret key for server. Automatically generated if not provided.
         #[arg(long)]
         key: Option<String>,
 
-        /// Run server in the background``
+        /// Run server in the background
         #[arg(short, long)]
         detach: bool,
     },
@@ -676,6 +672,14 @@ pub enum ServerSubcommand {
         /// Token expiration duration. format: 1s, 2m, 3h, 4d, 5w, 6mo, 7y
         #[arg(long)]
         expire: Option<String>,
+
+        /// Namespace for the API key
+        #[arg(short = 'n', long, required_unless_present = "all_namespaces")]
+        namespace: Option<String>,
+
+        /// Allow access to all namespaces
+        #[arg(short = 'a', long, conflicts_with = "namespace")]
+        all_namespaces: bool,
     },
 }
 
