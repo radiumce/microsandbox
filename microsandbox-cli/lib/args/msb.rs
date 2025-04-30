@@ -632,7 +632,7 @@ pub enum MicrosandboxSubcommand {
         action: SelfAction,
     },
 
-    /// Start a server for orchestrating sandboxes
+    /// Start a sandbox server for orchestrating and working with sandboxes
     #[command(name = "server")]
     Server {
         /// The subcommand to run
@@ -663,12 +663,16 @@ pub enum ServerSubcommand {
         dev_mode: bool,
 
         /// Set secret key for server. Automatically generated if not provided.
-        #[arg(long)]
+        #[arg(short, long)]
         key: Option<String>,
 
         /// Run server in the background
         #[arg(short, long)]
         detach: bool,
+
+        /// Reset the server key
+        #[arg(short, long)]
+        reset_key: bool,
     },
 
     /// Stop the sandbox server
@@ -681,13 +685,9 @@ pub enum ServerSubcommand {
         #[arg(long)]
         expire: Option<String>,
 
-        /// Namespace for the API key
-        #[arg(short = 'n', long, required_unless_present = "all_namespaces")]
+        /// Namespace for the API key. If not specified, generates a key for all namespaces.
+        #[arg(short, long)]
         namespace: Option<String>,
-
-        /// Allow access to all namespaces
-        #[arg(short = 'a', long, conflicts_with = "namespace")]
-        all: bool,
     },
 
     /// Show logs of a sandbox
@@ -717,9 +717,9 @@ pub enum ServerSubcommand {
     /// List sandboxes in a namespace
     #[command(name = "list")]
     List {
-        /// Namespace to list sandboxes from
-        #[arg(short, long, required = true)]
-        namespace: String,
+        /// Namespace to list sandboxes from. If not provided, lists sandboxes from all namespaces.
+        #[arg(short, long)]
+        namespace: Option<String>,
     },
 
     /// Show server status
@@ -733,9 +733,25 @@ pub enum ServerSubcommand {
         #[arg()]
         names: Vec<String>,
 
-        /// Namespace to show status for
+        /// Namespace to show status for. If not provided, shows status for all namespaces.
+        #[arg(short, long)]
+        namespace: Option<String>,
+    },
+
+    /// SSH into a sandbox
+    #[command(name = "ssh")]
+    Ssh {
+        /// Namespace for the SSH key
         #[arg(short, long, required = true)]
         namespace: String,
+
+        /// Whether to SSH into a sandbox
+        #[arg(short, long)]
+        sandbox: bool,
+
+        /// Name of the sandbox
+        #[arg(required = true)]
+        name: String,
     },
 }
 

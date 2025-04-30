@@ -50,15 +50,23 @@ typed-path.workspace = true
 uuid.workspace = true
 xattr.workspace = true
 sysinfo = "0.34"
-psutil = "3.2.2"
-nix = { version = "0.29", features = ["mount", "user", "fs"] }
+regex.workspace = true
+psutil = "3.3.0"
+nix = { workspace = true, features = [
+    "mount",
+    "user",
+    "fs",
+    "process",
+    "term",
+    "signal",
+] }
 tar = "0.4"
 flate2 = "1.0"
 walkdir = "2.4"
 scopeguard = "1.2"
 tokio-stream = { version = "0.1.17", features = ["fs"] }
 pretty-error-debug.workspace = true
-serde_yaml = "0.9.34"
+serde_yaml.workspace = true
 async-stream.workspace = true
 pin-project = "1.1.7"
 tracing-appender = "0.2.3"
@@ -68,7 +76,6 @@ bon = "3.3.0"
 ipnetwork = { version = "0.21.0", features = ["serde"] }
 sqlx.workspace = true
 microsandbox-utils.workspace = true
-regex.workspace = true
 async-recursion.workspace = true
 file-lock = "2.1.11"
 nondestructive = { version = "0.0.26", features = ["serde"] }
@@ -77,8 +84,9 @@ rand.workspace = true
 indicatif = { workspace = true, optional = true }
 console = { workspace = true, optional = true }
 which = "7.0"
-crossterm = { version = "0.29.0", features = ["events"] }
-atty = "0.2.14"
+crossterm.workspace = true
+atty.workspace = true
+once_cell = "1.18"
 
 [dev-dependencies]
 test-log.workspace = true

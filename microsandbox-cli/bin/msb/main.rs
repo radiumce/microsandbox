@@ -236,19 +236,23 @@ async fn main() -> MicrosandboxCliResult<()> {
                 dev_mode,
                 key,
                 detach,
+                reset_key,
             } => {
-                handlers::server_start_subcommand(port, namespace_dir, dev_mode, key, detach)
-                    .await?;
+                handlers::server_start_subcommand(
+                    port,
+                    namespace_dir,
+                    dev_mode,
+                    key,
+                    detach,
+                    reset_key,
+                )
+                .await?;
             }
             ServerSubcommand::Stop => {
                 handlers::server_stop_subcommand().await?;
             }
-            ServerSubcommand::Keygen {
-                expire,
-                namespace,
-                all,
-            } => {
-                handlers::server_keygen_subcommand(expire, namespace, all).await?;
+            ServerSubcommand::Keygen { expire, namespace } => {
+                handlers::server_keygen_subcommand(expire, namespace).await?;
             }
             ServerSubcommand::Log {
                 sandbox,
@@ -268,6 +272,13 @@ async fn main() -> MicrosandboxCliResult<()> {
                 namespace,
             } => {
                 handlers::server_status_subcommand(sandbox, names, namespace).await?;
+            }
+            ServerSubcommand::Ssh {
+                namespace,
+                sandbox,
+                name,
+            } => {
+                handlers::server_ssh_subcommand(namespace, sandbox, name).await?;
             }
         },
         Some(MicrosandboxSubcommand::Login) => {
