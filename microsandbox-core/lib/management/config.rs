@@ -553,9 +553,9 @@ pub async fn apply_image_defaults(
             }
         }
 
-        // Apply entrypoint and cmd as exec if no exec is defined
-        if sandbox_config.get_exec().is_none() {
-            let mut cmd_line = String::new();
+        // Apply entrypoint and cmd as command if no command is defined
+        if sandbox_config.get_command().is_empty() {
+            let mut command_vec: Vec<String> = Vec::new();
             let mut has_entrypoint_or_cmd = false;
 
             // Try to use entrypoint and cmd from image config
@@ -563,76 +563,38 @@ pub async fn apply_image_defaults(
                 if let Ok(entrypoint) = serde_json::from_str::<Vec<String>>(entrypoint_json) {
                     if !entrypoint.is_empty() {
                         has_entrypoint_or_cmd = true;
-
-                        // Format the entrypoint command with proper escaping
-                        for (i, arg) in entrypoint.iter().enumerate() {
-                            if i > 0 {
-                                cmd_line.push(' ');
-                            }
-                            // Simple shell escaping for arguments
-                            if arg.contains(' ') || arg.contains('"') || arg.contains('\'') {
-                                cmd_line.push_str(&format!("'{}'", arg.replace('\'', "'\\''")));
-                            } else {
-                                cmd_line.push_str(arg);
-                            }
-                        }
+                        command_vec = entrypoint;
 
                         // Add CMD args if they exist
                         if let Some(cmd_json) = &config.config_cmd_json {
                             if let Ok(cmd) = serde_json::from_str::<Vec<String>>(cmd_json) {
                                 if !cmd.is_empty() {
-                                    for arg in cmd {
-                                        cmd_line.push(' ');
-                                        if arg.contains(' ')
-                                            || arg.contains('"')
-                                            || arg.contains('\'')
-                                        {
-                                            cmd_line.push_str(&format!(
-                                                "'{}'",
-                                                arg.replace('\'', "'\\''")
-                                            ));
-                                        } else {
-                                            cmd_line.push_str(&arg);
-                                        }
-                                    }
+                                    command_vec.extend(cmd);
                                 }
                             }
                         }
 
-                        tracing::debug!("entrypoint exec content: {}", cmd_line);
+                        tracing::debug!("entrypoint exec content: {:?}", command_vec);
                     }
                 }
             } else if let Some(cmd_json) = &config.config_cmd_json {
                 if let Ok(cmd) = serde_json::from_str::<Vec<String>>(cmd_json) {
                     if !cmd.is_empty() {
                         has_entrypoint_or_cmd = true;
-
-                        // Format the cmd command with proper escaping
-                        for (i, arg) in cmd.iter().enumerate() {
-                            if i > 0 {
-                                cmd_line.push(' ');
-                            }
-                            // Simple shell escaping for arguments
-                            if arg.contains(' ') || arg.contains('"') || arg.contains('\'') {
-                                cmd_line.push_str(&format!("'{}'", arg.replace('\'', "'\\''")));
-                            } else {
-                                cmd_line.push_str(arg);
-                            }
-                        }
-
-                        tracing::debug!("cmd exec content: {}", cmd_line);
+                        command_vec = cmd;
+                        tracing::debug!("cmd exec content: {:?}", command_vec);
                     }
                 }
             }
 
-            // If we found an entrypoint or cmd, set it as the exec
+            // If we found an entrypoint or cmd, set it as the command
             if has_entrypoint_or_cmd {
-                tracing::debug!("setting exec to: {}", cmd_line);
-                sandbox_config.exec = Some(cmd_line);
+                tracing::debug!("setting command to: {:?}", command_vec);
+                sandbox_config.command = command_vec;
             } else if let Some(shell_value) = &sandbox_config.shell {
-                // If no entrypoint or cmd, use shell as fallback
-                tracing::debug!("using shell as fallback exec");
-                sandbox_config.exec = Some(shell_value.clone());
+                // If no entrypoint or cmd, use shell as fallback command
+                tracing::debug!("using shell as fallback command");
+                sandbox_config.command = vec![shell_value.clone()];
             }
         }
 
