@@ -17,6 +17,8 @@ use crate::{
 
 #[cfg(feature = "cli")]
 use console::style;
+#[cfg(feature = "cli")]
+use microsandbox_utils::term;
 use microsandbox_utils::{MICROSANDBOX_ENV_DIR, SANDBOX_DB_FILENAME};
 use nix::{
     sys::signal::{self, Signal},
@@ -38,6 +40,15 @@ use super::{config, db, menv, sandbox};
 
 /// TTL for cached directory sizes.
 const DISK_SIZE_TTL: Duration = Duration::from_secs(30);
+
+#[cfg(feature = "cli")]
+const APPLY_CONFIG_MSG: &str = "Applying sandbox configuration";
+
+#[cfg(feature = "cli")]
+const START_SANDBOXES_MSG: &str = "Starting sandboxes";
+
+#[cfg(feature = "cli")]
+const STOP_SANDBOXES_MSG: &str = "Stopping sandboxes";
 
 /// Global cache path -> (size, last_updated)
 static DISK_SIZE_CACHE: Lazy<RwLock<HashMap<String, (u64, Instant)>>> =
@@ -94,6 +105,7 @@ pub struct SandboxStatus {
 ///
 /// * `project_dir` - Optional path to the project directory. If None, defaults to current directory
 /// * `config_file` - Optional path to the Microsandbox config file. If None, uses default filename
+/// * `detach` - Whether to run sandboxes in detached mode (true) or with prefixed output (false)
 ///
 /// ## Returns
 ///
@@ -111,12 +123,13 @@ pub struct SandboxStatus {
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
 ///     // Apply configuration changes from the default microsandbox.yaml
-///     orchestra::apply(None, None).await?;
+///     orchestra::apply(None, None, true).await?;
 ///
-///     // Or specify a custom project directory and config file
+///     // Or specify a custom project directory and config file, in non-detached mode
 ///     orchestra::apply(
 ///         Some(&PathBuf::from("/path/to/project")),
 ///         Some("custom-config.yaml"),
+///         false,
 ///     ).await?;
 ///     Ok(())
 /// }
@@ -124,43 +137,115 @@ pub struct SandboxStatus {
 pub async fn apply(
     project_dir: Option<&Path>,
     config_file: Option<&str>,
+    detach: bool,
 ) -> MicrosandboxResult<()> {
+    // Create spinner for CLI feedback
+    #[cfg(feature = "cli")]
+    let apply_config_sp = term::create_spinner(APPLY_CONFIG_MSG.to_string(), None, None);
+
     // Load the configuration first to validate it exists before acquiring lock
     let (config, canonical_project_dir, config_file) =
-        config::load_config(project_dir, config_file).await?;
+        match config::load_config(project_dir, config_file).await {
+            Ok(result) => result,
+            Err(e) => {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&apply_config_sp);
+                return Err(e);
+            }
+        };
 
     // Ensure menv files exist
     let menv_path = canonical_project_dir.join(MICROSANDBOX_ENV_DIR);
-    menv::ensure_menv_files(&menv_path).await?;
+    if let Err(e) = menv::ensure_menv_files(&menv_path).await {
+        #[cfg(feature = "cli")]
+        term::finish_with_error(&apply_config_sp);
+        return Err(e);
+    }
 
     // Get database connection pool
     let db_path = menv_path.join(SANDBOX_DB_FILENAME);
-    let pool = db::get_or_create_pool(&db_path, &db::SANDBOX_DB_MIGRATOR).await?;
+    let pool = match db::get_or_create_pool(&db_path, &db::SANDBOX_DB_MIGRATOR).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&apply_config_sp);
+            return Err(e);
+        }
+    };
 
     // Get all sandboxes defined in config
     let config_sandboxes = config.get_sandboxes();
 
     // Get all running sandboxes from database
-    let running_sandboxes = db::get_running_config_sandboxes(&pool, &config_file).await?;
+    let running_sandboxes = match db::get_running_config_sandboxes(&pool, &config_file).await {
+        Ok(sandboxes) => sandboxes,
+        Err(e) => {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&apply_config_sp);
+            return Err(e);
+        }
+    };
     let running_sandbox_names: Vec<String> =
         running_sandboxes.iter().map(|s| s.name.clone()).collect();
 
-    // Start sandboxes that are in config but not active
-    for (name, _) in config_sandboxes {
-        // Should start in parallel
-        if !running_sandbox_names.contains(name) {
+    // Collect sandboxes that need to be started
+    let sandboxes_to_start: Vec<&String> = config_sandboxes
+        .keys()
+        .filter(|name| !running_sandbox_names.contains(*name))
+        .collect();
+
+    if sandboxes_to_start.is_empty() {
+        tracing::info!("No new sandboxes to start");
+    } else if detach {
+        // Start sandboxes in detached mode
+        for name in sandboxes_to_start {
             tracing::info!("starting sandbox: {}", name);
-            sandbox::run(
+            if let Err(e) = sandbox::run(
                 name,
                 Some(START_SCRIPT_NAME),
                 Some(&canonical_project_dir),
                 Some(&config_file),
                 vec![],
-                true,
+                true, // detached mode
                 None,
                 true,
             )
-            .await?;
+            .await
+            {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&apply_config_sp);
+                return Err(e);
+            }
+        }
+    } else {
+        // Start sandboxes in non-detached mode with multiplexed output
+        let sandbox_commands = match prepare_sandbox_commands(
+            &sandboxes_to_start,
+            Some(START_SCRIPT_NAME),
+            &canonical_project_dir,
+            &config_file,
+        )
+        .await
+        {
+            Ok(commands) => commands,
+            Err(e) => {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&apply_config_sp);
+                return Err(e);
+            }
+        };
+
+        if !sandbox_commands.is_empty() {
+            // Finish the spinner before running commands with output
+            #[cfg(feature = "cli")]
+            apply_config_sp.finish();
+
+            if let Err(e) = run_commands_with_prefixed_output(sandbox_commands).await {
+                return Err(e);
+            }
+
+            // Return early as we've already finished the spinner
+            return Ok(());
         }
     }
 
@@ -168,12 +253,19 @@ pub async fn apply(
     for sandbox in running_sandboxes {
         if !config_sandboxes.contains_key(&sandbox.name) {
             tracing::info!("stopping sandbox: {}", sandbox.name);
-            signal::kill(
+            if let Err(e) = signal::kill(
                 Pid::from_raw(sandbox.supervisor_pid as i32),
                 Signal::SIGTERM,
-            )?;
+            ) {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&apply_config_sp);
+                return Err(e.into());
+            }
         }
     }
+
+    #[cfg(feature = "cli")]
+    apply_config_sp.finish();
 
     Ok(())
 }
@@ -189,6 +281,7 @@ pub async fn apply(
 /// * `sandbox_names` - List of sandbox names to start
 /// * `project_dir` - Optional path to the project directory. If None, defaults to current directory
 /// * `config_file` - Optional path to the Microsandbox config file. If None, uses default filename
+/// * `detach` - Whether to run sandboxes in detached mode (true) or with prefixed output (false)
 ///
 /// ## Returns
 ///
@@ -205,14 +298,15 @@ pub async fn apply(
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     // Start specific sandboxes from the default microsandbox.yaml
-///     orchestra::up(vec!["sandbox1".to_string(), "sandbox2".to_string()], None, None).await?;
+///     // Start specific sandboxes from the default microsandbox.yaml in detached mode
+///     orchestra::up(vec!["sandbox1".to_string(), "sandbox2".to_string()], None, None, true).await?;
 ///
-///     // Or specify a custom project directory and config file
+///     // Or specify a custom project directory and config file, in non-detached mode
 ///     orchestra::up(
 ///         vec!["sandbox1".to_string()],
 ///         Some(&PathBuf::from("/path/to/project")),
 ///         Some("custom-config.yaml"),
+///         false,
 ///     ).await?;
 ///     Ok(())
 /// }
@@ -221,53 +315,147 @@ pub async fn up(
     sandbox_names: Vec<String>,
     project_dir: Option<&Path>,
     config_file: Option<&str>,
+    detach: bool,
 ) -> MicrosandboxResult<()> {
+    // Create spinner for CLI feedback
+    #[cfg(feature = "cli")]
+    let start_sandboxes_sp = term::create_spinner(START_SANDBOXES_MSG.to_string(), None, None);
+
     // Load the configuration first to validate it exists
     let (config, canonical_project_dir, config_file) =
-        config::load_config(project_dir, config_file).await?;
-
-    // Validate all sandbox names exist in config before proceeding
-    validate_sandbox_names(
-        &sandbox_names,
-        &config,
-        &canonical_project_dir,
-        &config_file,
-    )?;
-
-    // Ensure menv files exist
-    let menv_path = canonical_project_dir.join(MICROSANDBOX_ENV_DIR);
-    menv::ensure_menv_files(&menv_path).await?;
-
-    // Get database connection pool
-    let db_path = menv_path.join(SANDBOX_DB_FILENAME);
-    let pool = db::get_or_create_pool(&db_path, &db::SANDBOX_DB_MIGRATOR).await?;
+        match config::load_config(project_dir, config_file).await {
+            Ok(result) => result,
+            Err(e) => {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&start_sandboxes_sp);
+                return Err(e);
+            }
+        };
 
     // Get all sandboxes defined in config
     let config_sandboxes = config.get_sandboxes();
 
+    // Use all sandbox names from config if no names were specified
+    let sandbox_names_to_start = if sandbox_names.is_empty() {
+        // Use all sandbox names from config
+        config_sandboxes.keys().cloned().collect()
+    } else {
+        // Validate all sandbox names exist in config before proceeding
+        if let Err(e) = validate_sandbox_names(
+            &sandbox_names,
+            &config,
+            &canonical_project_dir,
+            &config_file,
+        ) {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&start_sandboxes_sp);
+            return Err(e);
+        }
+
+        sandbox_names
+    };
+
+    // Ensure menv files exist
+    let menv_path = canonical_project_dir.join(MICROSANDBOX_ENV_DIR);
+    if let Err(e) = menv::ensure_menv_files(&menv_path).await {
+        #[cfg(feature = "cli")]
+        term::finish_with_error(&start_sandboxes_sp);
+        return Err(e);
+    }
+
+    // Get database connection pool
+    let db_path = menv_path.join(SANDBOX_DB_FILENAME);
+    let pool = match db::get_or_create_pool(&db_path, &db::SANDBOX_DB_MIGRATOR).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&start_sandboxes_sp);
+            return Err(e);
+        }
+    };
+
     // Get all running sandboxes from database
-    let running_sandboxes = db::get_running_config_sandboxes(&pool, &config_file).await?;
+    let running_sandboxes = match db::get_running_config_sandboxes(&pool, &config_file).await {
+        Ok(sandboxes) => sandboxes,
+        Err(e) => {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&start_sandboxes_sp);
+            return Err(e);
+        }
+    };
     let running_sandbox_names: Vec<String> =
         running_sandboxes.iter().map(|s| s.name.clone()).collect();
 
-    // Start specified sandboxes that are in config but not active
-    for (sandbox_name, _) in config_sandboxes {
-        // Only start if sandbox is in the specified list and not already running
-        if sandbox_names.contains(sandbox_name) && !running_sandbox_names.contains(sandbox_name) {
-            tracing::info!("starting sandbox: {}", sandbox_name);
-            sandbox::run(
-                sandbox_name,
+    // Collect sandboxes that need to be started
+    let sandboxes_to_start: Vec<&String> = config_sandboxes
+        .keys()
+        .filter(|name| {
+            sandbox_names_to_start.contains(*name) && !running_sandbox_names.contains(*name)
+        })
+        .collect();
+
+    if sandboxes_to_start.is_empty() {
+        tracing::info!("No new sandboxes to start");
+        #[cfg(feature = "cli")]
+        start_sandboxes_sp.finish();
+        return Ok(());
+    }
+
+    if detach {
+        // Start specified sandboxes in detached mode
+        for name in sandboxes_to_start {
+            tracing::info!("starting sandbox: {}", name);
+            if let Err(e) = sandbox::run(
+                name,
                 None,
                 Some(&canonical_project_dir),
                 Some(&config_file),
                 vec![],
-                true,
+                true, // detached mode
                 None,
                 true,
             )
-            .await?;
+            .await
+            {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&start_sandboxes_sp);
+                return Err(e);
+            }
+        }
+    } else {
+        // Start sandboxes in non-detached mode with multiplexed output
+        let sandbox_commands = match prepare_sandbox_commands(
+            &sandboxes_to_start,
+            None, // Start script is None for normal up
+            &canonical_project_dir,
+            &config_file,
+        )
+        .await
+        {
+            Ok(commands) => commands,
+            Err(e) => {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&start_sandboxes_sp);
+                return Err(e);
+            }
+        };
+
+        if !sandbox_commands.is_empty() {
+            // Finish the spinner before running commands with output
+            #[cfg(feature = "cli")]
+            start_sandboxes_sp.finish();
+
+            if let Err(e) = run_commands_with_prefixed_output(sandbox_commands).await {
+                return Err(e);
+            }
+
+            // Return early as we've already finished the spinner
+            return Ok(());
         }
     }
+
+    #[cfg(feature = "cli")]
+    start_sandboxes_sp.finish();
 
     Ok(())
 }
@@ -316,42 +504,92 @@ pub async fn down(
     project_dir: Option<&Path>,
     config_file: Option<&str>,
 ) -> MicrosandboxResult<()> {
+    // Create spinner for CLI feedback
+    #[cfg(feature = "cli")]
+    let stop_sandboxes_sp = term::create_spinner(STOP_SANDBOXES_MSG.to_string(), None, None);
+
     // Load the configuration first to validate it exists
     let (config, canonical_project_dir, config_file) =
-        config::load_config(project_dir, config_file).await?;
-
-    // Validate all sandbox names exist in config before proceeding
-    validate_sandbox_names(
-        &sandbox_names,
-        &config,
-        &canonical_project_dir,
-        &config_file,
-    )?;
-
-    // Ensure menv files exist
-    let menv_path = canonical_project_dir.join(MICROSANDBOX_ENV_DIR);
-    menv::ensure_menv_files(&menv_path).await?;
-
-    // Get database connection pool
-    let db_path = menv_path.join(SANDBOX_DB_FILENAME);
-    let pool = db::get_or_create_pool(&db_path, &db::SANDBOX_DB_MIGRATOR).await?;
+        match config::load_config(project_dir, config_file).await {
+            Ok(result) => result,
+            Err(e) => {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&stop_sandboxes_sp);
+                return Err(e);
+            }
+        };
 
     // Get all sandboxes defined in config
     let config_sandboxes = config.get_sandboxes();
 
+    // Use all sandbox names from config if no names were specified
+    let sandbox_names_to_stop = if sandbox_names.is_empty() {
+        // Use all sandbox names from config
+        config_sandboxes.keys().cloned().collect()
+    } else {
+        // Validate all sandbox names exist in config before proceeding
+        if let Err(e) = validate_sandbox_names(
+            &sandbox_names,
+            &config,
+            &canonical_project_dir,
+            &config_file,
+        ) {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&stop_sandboxes_sp);
+            return Err(e);
+        }
+
+        sandbox_names
+    };
+
+    // Ensure menv files exist
+    let menv_path = canonical_project_dir.join(MICROSANDBOX_ENV_DIR);
+    if let Err(e) = menv::ensure_menv_files(&menv_path).await {
+        #[cfg(feature = "cli")]
+        term::finish_with_error(&stop_sandboxes_sp);
+        return Err(e);
+    }
+
+    // Get database connection pool
+    let db_path = menv_path.join(SANDBOX_DB_FILENAME);
+    let pool = match db::get_or_create_pool(&db_path, &db::SANDBOX_DB_MIGRATOR).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&stop_sandboxes_sp);
+            return Err(e);
+        }
+    };
+
     // Get all running sandboxes from database
-    let running_sandboxes = db::get_running_config_sandboxes(&pool, &config_file).await?;
+    let running_sandboxes = match db::get_running_config_sandboxes(&pool, &config_file).await {
+        Ok(sandboxes) => sandboxes,
+        Err(e) => {
+            #[cfg(feature = "cli")]
+            term::finish_with_error(&stop_sandboxes_sp);
+            return Err(e);
+        }
+    };
 
     // Stop specified sandboxes that are both in config and running
     for sandbox in running_sandboxes {
-        if sandbox_names.contains(&sandbox.name) && config_sandboxes.contains_key(&sandbox.name) {
+        if sandbox_names_to_stop.contains(&sandbox.name)
+            && config_sandboxes.contains_key(&sandbox.name)
+        {
             tracing::info!("stopping sandbox: {}", sandbox.name);
-            signal::kill(
+            if let Err(e) = signal::kill(
                 Pid::from_raw(sandbox.supervisor_pid as i32),
                 Signal::SIGTERM,
-            )?;
+            ) {
+                #[cfg(feature = "cli")]
+                term::finish_with_error(&stop_sandboxes_sp);
+                return Err(e.into());
+            }
         }
     }
+
+    #[cfg(feature = "cli")]
+    stop_sandboxes_sp.finish();
 
     Ok(())
 }
@@ -683,6 +921,241 @@ pub async fn show_status_namespaces(
 //--------------------------------------------------------------------------------------------------
 // Functions: Helpers
 //--------------------------------------------------------------------------------------------------
+
+// Helper function to prepare commands for multiple sandboxes
+async fn prepare_sandbox_commands(
+    sandbox_names: &[&String],
+    script_name: Option<&str>,
+    project_dir: &Path,
+    config_file: &str,
+) -> MicrosandboxResult<Vec<(String, tokio::process::Command)>> {
+    let mut commands = Vec::new();
+
+    for &name in sandbox_names {
+        // Don't print any individual sandbox preparation logs
+
+        let (command, _) = sandbox::prepare_run(
+            name,
+            script_name,
+            Some(project_dir),
+            Some(config_file),
+            vec![],
+            false, // non-detached
+            None,
+            true,
+        )
+        .await?;
+
+        commands.push((name.clone(), command));
+    }
+
+    Ok(commands)
+}
+
+// Helper function to run multiple commands with prefixed output
+async fn run_commands_with_prefixed_output(
+    commands: Vec<(String, tokio::process::Command)>,
+) -> MicrosandboxResult<()> {
+    use console::style;
+    use futures::future::join_all;
+    use std::process::Stdio;
+    use tokio::io::{AsyncBufReadExt, BufReader};
+
+    // Exit early if no commands to run
+    if commands.is_empty() {
+        return Ok(());
+    }
+
+    // This will hold our child process handles and associated tasks
+    let mut children = Vec::new();
+    let mut output_tasks = Vec::new();
+
+    // Spawn all child processes
+    for (i, (sandbox_name, mut command)) in commands.into_iter().enumerate() {
+        // Configure command to pipe stdout and stderr
+        command.stdout(Stdio::piped());
+        command.stderr(Stdio::piped());
+
+        // Spawn the child process
+        let mut child = command.spawn()?;
+        let sandbox_name_clone = sandbox_name.clone();
+
+        // Style the sandbox name based on index
+        let styled_name = match i % 7 {
+            0 => style(&sandbox_name).green().bold(),
+            1 => style(&sandbox_name).blue().bold(),
+            2 => style(&sandbox_name).red().bold(),
+            3 => style(&sandbox_name).yellow().bold(),
+            4 => style(&sandbox_name).magenta().bold(),
+            5 => style(&sandbox_name).cyan().bold(),
+            _ => style(&sandbox_name).white().bold(),
+        };
+
+        // Apply the same color to the separator bar
+        let styled_separator = match i % 7 {
+            0 => style("|").green(),
+            1 => style("|").blue(),
+            2 => style("|").red(),
+            3 => style("|").yellow(),
+            4 => style("|").magenta(),
+            5 => style("|").cyan(),
+            _ => style("|").white(),
+        };
+
+        tracing::info!(
+            "{} {} started supervisor process with PID: {}",
+            styled_name,
+            styled_separator,
+            child.id().unwrap_or(0)
+        );
+
+        // Create task to handle stdout
+        let stdout = child.stdout.take().expect("Failed to capture stdout");
+        let name_stdout = sandbox_name.clone();
+        let color_index = i;
+        let stdout_task = tokio::spawn(async move {
+            let mut reader = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                // Style the sandbox name and separator with color, but leave the message as plain text
+                let styled_name = match color_index % 7 {
+                    0 => style(&name_stdout).green().bold(),
+                    1 => style(&name_stdout).blue().bold(),
+                    2 => style(&name_stdout).red().bold(),
+                    3 => style(&name_stdout).yellow().bold(),
+                    4 => style(&name_stdout).magenta().bold(),
+                    5 => style(&name_stdout).cyan().bold(),
+                    _ => style(&name_stdout).white().bold(),
+                };
+
+                // Apply the same color to the separator bar
+                let styled_separator = match color_index % 7 {
+                    0 => style("|").green(),
+                    1 => style("|").blue(),
+                    2 => style("|").red(),
+                    3 => style("|").yellow(),
+                    4 => style("|").magenta(),
+                    5 => style("|").cyan(),
+                    _ => style("|").white(),
+                };
+
+                #[cfg(feature = "cli")]
+                println!("{} {} {}", styled_name, styled_separator, line);
+            }
+        });
+
+        // Create task to handle stderr
+        let stderr = child.stderr.take().expect("Failed to capture stderr");
+        let color_index = i;
+        let stderr_task = tokio::spawn(async move {
+            let mut reader = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                // Style the sandbox name and separator with color, but leave the message as plain text
+                let styled_name = match color_index % 7 {
+                    0 => style(&sandbox_name_clone).green().bold(),
+                    1 => style(&sandbox_name_clone).blue().bold(),
+                    2 => style(&sandbox_name_clone).red().bold(),
+                    3 => style(&sandbox_name_clone).yellow().bold(),
+                    4 => style(&sandbox_name_clone).magenta().bold(),
+                    5 => style(&sandbox_name_clone).cyan().bold(),
+                    _ => style(&sandbox_name_clone).white().bold(),
+                };
+
+                // Apply the same color to the separator bar
+                let styled_separator = match color_index % 7 {
+                    0 => style("|").green(),
+                    1 => style("|").blue(),
+                    2 => style("|").red(),
+                    3 => style("|").yellow(),
+                    4 => style("|").magenta(),
+                    5 => style("|").cyan(),
+                    _ => style("|").white(),
+                };
+
+                #[cfg(feature = "cli")]
+                eprintln!("{} {} {}", styled_name, styled_separator, line);
+            }
+        });
+
+        // Add to our collections
+        children.push((sandbox_name, child));
+        output_tasks.push(stdout_task);
+        output_tasks.push(stderr_task);
+    }
+
+    // Create task to monitor child processes
+    let monitor_task = tokio::spawn(async move {
+        let mut statuses = Vec::new();
+
+        for (name, mut child) in children {
+            match child.wait().await {
+                Ok(status) => {
+                    let exit_code = status.code().unwrap_or(-1);
+                    let success = status.success();
+                    statuses.push((name, exit_code, success));
+                }
+                Err(e) => {
+                    #[cfg(feature = "cli")]
+                    eprintln!("Error waiting for sandbox {}: {}", name, e);
+                    statuses.push((name, -1, false));
+                }
+            }
+        }
+
+        statuses
+    });
+
+    // Wait for all processes to complete and output tasks to finish
+    let statuses = monitor_task.await?;
+    join_all(output_tasks).await;
+
+    // Check results and return error if any sandbox failed
+    let failed_sandboxes: Vec<(String, i32)> = statuses
+        .into_iter()
+        .filter(|(_, _, success)| !success)
+        .map(|(name, code, _)| (name, code))
+        .collect();
+
+    if !failed_sandboxes.is_empty() {
+        // Format failure message with colored sandbox names
+        let error_msg = failed_sandboxes
+            .iter()
+            .enumerate()
+            .map(|(i, (name, code))| {
+                // Apply colors directly based on index
+                let styled_name = match i % 7 {
+                    0 => style(name).green().bold(),
+                    1 => style(name).blue().bold(),
+                    2 => style(name).red().bold(),
+                    3 => style(name).yellow().bold(),
+                    4 => style(name).magenta().bold(),
+                    5 => style(name).cyan().bold(),
+                    _ => style(name).white().bold(),
+                };
+
+                // Apply the same color to the separator bar
+                let styled_separator = match i % 7 {
+                    0 => style("|").green(),
+                    1 => style("|").blue(),
+                    2 => style("|").red(),
+                    3 => style("|").yellow(),
+                    4 => style("|").magenta(),
+                    5 => style("|").cyan(),
+                    _ => style("|").white(),
+                };
+
+                format!("{} {} exit code: {}", styled_name, styled_separator, code)
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        return Err(MicrosandboxError::SupervisorError(format!(
+            "The following sandboxes failed: {}",
+            error_msg
+        )));
+    }
+
+    Ok(())
+}
 
 // Extracted the status display logic to a separate function
 #[cfg(feature = "cli")]
