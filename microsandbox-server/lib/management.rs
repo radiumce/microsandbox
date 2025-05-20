@@ -16,9 +16,11 @@ use std::{path::PathBuf, process::Stdio};
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header};
+#[cfg(feature = "cli")]
+use microsandbox_utils::term;
 use microsandbox_utils::{
-    env, term, DEFAULT_MSBSERVER_EXE_PATH, MSBSERVER_EXE_ENV_VAR, NAMESPACES_SUBDIR,
-    SERVER_KEY_FILE, SERVER_PID_FILE,
+    env, DEFAULT_MSBSERVER_EXE_PATH, MSBSERVER_EXE_ENV_VAR, NAMESPACES_SUBDIR, SERVER_KEY_FILE,
+    SERVER_PID_FILE,
 };
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -403,7 +405,10 @@ pub async fn stop() -> MicrosandboxServerResult<()> {
 }
 
 /// Generate a new API key (JWT token)
-pub async fn keygen(expire: Option<Duration>, namespace: String) -> MicrosandboxServerResult<()> {
+pub async fn keygen(
+    expire: Option<Duration>,
+    namespace: String,
+) -> MicrosandboxServerResult<String> {
     let microsandbox_home_path = env::get_microsandbox_home_path();
     let key_file_path = microsandbox_home_path.join(SERVER_KEY_FILE);
 
@@ -482,7 +487,7 @@ pub async fn keygen(expire: Option<Duration>, namespace: String) -> Microsandbox
         println!("Namespace: {}", console::style(&claims.namespace).cyan());
     }
 
-    Ok(())
+    Ok(token_str)
 }
 
 /// Clean up the PID file

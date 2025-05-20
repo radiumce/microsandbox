@@ -1038,7 +1038,6 @@ async fn run_commands_with_prefixed_output(
                     _ => style("|").white(),
                 };
 
-                #[cfg(feature = "cli")]
                 println!("{} {} {}", styled_name, styled_separator, line);
             }
         });
@@ -1071,7 +1070,6 @@ async fn run_commands_with_prefixed_output(
                     _ => style("|").white(),
                 };
 
-                #[cfg(feature = "cli")]
                 eprintln!("{} {} {}", styled_name, styled_separator, line);
             }
         });
@@ -1093,9 +1091,9 @@ async fn run_commands_with_prefixed_output(
                     let success = status.success();
                     statuses.push((name, exit_code, success));
                 }
-                Err(e) => {
+                Err(_e) => {
                     #[cfg(feature = "cli")]
-                    eprintln!("Error waiting for sandbox {}: {}", name, e);
+                    eprintln!("Error waiting for sandbox {}: {}", name, _e);
                     statuses.push((name, -1, false));
                 }
             }
