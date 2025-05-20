@@ -179,13 +179,6 @@ install_files() {
     install -m 755 msx "$BIN_DIR/" || { error "Failed to install msx"; exit 1; }
     install -m 755 msi "$BIN_DIR/" || { error "Failed to install msi"; exit 1; }
 
-    # Self codesign on macOS
-    if [ "$OS" = "darwin" ]; then
-        info "Attempting to codesign executables on macOS..."
-        codesign --force -s - "$BIN_DIR/msbrun" 2>/dev/null || true
-        info "Codesigning done"
-    fi
-
     # Install libraries
     info "Installing libraries..."
     if [ "$OS" = "darwin" ]; then
