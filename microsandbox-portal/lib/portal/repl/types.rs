@@ -44,10 +44,6 @@ pub enum Language {
     /// Node.js/JavaScript support
     #[cfg(feature = "nodejs")]
     Node,
-
-    /// Rust language support
-    #[cfg(feature = "rust")]
-    Rust,
 }
 
 /// Stream type for output lines
@@ -115,6 +111,7 @@ pub(crate) enum Cmd {
         code: String,
         language: Language,
         resp_tx: Sender<Resp>,
+        timeout: Option<u64>,
     },
 
     /// Shutdown the reactor and all engines
@@ -181,11 +178,13 @@ pub trait Engine: Send + 'static {
     /// * `id` - A unique identifier for this evaluation
     /// * `code` - The code to evaluate
     /// * `sender` - A channel for sending evaluation responses
+    /// * `timeout` - Optional timeout in seconds after which evaluation will be cancelled
     async fn eval(
         &mut self,
         id: String,
         code: String,
         sender: &Sender<Resp>,
+        timeout: Option<u64>,
     ) -> Result<(), EngineError>;
 
     /// Shutdown the engine
