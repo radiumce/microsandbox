@@ -8,7 +8,7 @@
 #   ./install_microsandbox.sh [options]
 #
 # Options:
-#   --version       Specify version to install (default: 0.2.1)
+#   --version       Specify version to install (default: 0.2.0)
 #   --no-cleanup   Skip cleanup of temporary files after installation
 #
 # The script performs the following tasks:
@@ -43,7 +43,7 @@ error() {
 }
 
 # Default values
-VERSION="0.1.0"
+VERSION="0.2.0"
 NO_CLEANUP=false
 TEMP_DIR="/tmp/microsandbox-install"
 GITHUB_REPO="microsandbox/microsandbox"
@@ -185,9 +185,6 @@ install_files() {
         codesign --force -s - "$BIN_DIR/msbrun" 2>/dev/null || true
         info "Codesigning done"
     fi
-
-    # Create microsandbox symlink
-    ln -sf "$BIN_DIR/microsandbox" "$BIN_DIR/msb" || { warn "Failed to create microsandbox symlink"; }
 
     # Install libraries
     info "Installing libraries..."
