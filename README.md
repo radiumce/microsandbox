@@ -1,8 +1,8 @@
 <a href="./#gh-dark-mode-only" target="_blank">
-    <img width="100%" src="./assets/microsandbox-banner-xl-dark.png" alt="microsandbox-banner-xl-dark">
+<img width="100%" src="./assets/microsandbox-banner-xl-dark.png" alt="microsandbox-banner-xl-dark">
 </a>
 <a href="./#gh-light-mode-only" target="_blank">
-    <img width="100%" src="./assets/microsandbox-banner-xl.png" alt="microsandbox-banner-xl">
+<img width="100%" src="./assets/microsandbox-banner-xl.png" alt="microsandbox-banner-xl">
 </a>
 
 <div align="center"><b>———&nbsp;&nbsp;&nbsp;secure self-hosted sandboxes for your ai agents&nbsp;&nbsp;&nbsp;———</b></div>
@@ -52,9 +52,13 @@ To run your ai-generated code, you could try a few things:
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;QUICK START</sub>
 
-Get started with microsandbox in three straightforward steps.
+Get started with the SDK in a few easy steps:
 
-<h4><img height="13" src="https://octicons-col.vercel.app/key/A770EF">&nbsp;&nbsp;&nbsp;<span>1</span>&nbsp;&nbsp;·&nbsp;&nbsp;Get API Key</h3>
+<a href="https://asciinema.org/a/7eOFf2Ovigi473FsKgr3Lpve1" target="_blank"><img src="https://github.com/user-attachments/assets/1d089394-2a02-4fd2-85f8-82f70f79dc26"  width="2000" /></a>
+
+##
+
+<h3><span>1</span>&nbsp;&nbsp;<img height="13" src="https://octicons-col.vercel.app/key/A770EF">&nbsp;&nbsp;Get API Key</h3>
 
 - Get your API key <a href="./SELF_HOSTING.md">[→]</a>
 - Configure API key environment variable, for example by setting it in your `.env` file
@@ -65,13 +69,13 @@ Get started with microsandbox in three straightforward steps.
 
 ##
 
-<h4><img height="13" src="https://octicons-col.vercel.app/move-to-bottom/A770EF">&nbsp;&nbsp;&nbsp;<span>2</span>&nbsp;&nbsp;·&nbsp;&nbsp;Install SDK</h3>
+<h3><span>2</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/move-to-bottom/A770EF">&nbsp;&nbsp;Install SDK</h3>
 
-<!-- ##### JavaScript
+##### JavaScript
 
 ```sh
 npm install microsandbox
-``` -->
+```
 
 ##### Python
 
@@ -79,22 +83,11 @@ npm install microsandbox
 pip install microsandbox
 ```
 
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-uv add microsandbox
-```
-
-<!--
 ##### Rust
 
 ```sh
 cargo add microsandbox
-``` -->
+```
 
 > [!NOTE]
 > There are [SDKs](./sdk) for other languages as well! Join us in expanding support for your favorite language.
@@ -131,16 +124,16 @@ cargo add microsandbox
 
 ##
 
-<h4><img height="13" src="https://octicons-col.vercel.app/file-binary/A770EF">&nbsp;&nbsp;&nbsp;<span>3</span>&nbsp;&nbsp;·&nbsp;&nbsp;Execute Code in Sandbox</h3>
+<h3><span>3</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/file-binary/A770EF">&nbsp;&nbsp;Execute Code in Sandbox</h3>
 
 `microsandbox` offers a growing list of sandbox environment types optimized for different execution requirements. Choose the appropriate sandbox (e.g., PythonSandbox or NodeSandbox) to run your code in a secure tailored environment.
 
-<!-- ##### JavaScript
+##### JavaScript
 
 ```js
 import { NodeSandbox } from "microsandbox";
 
-const sb = await NodeSandbox.create();
+const sb = await NodeSandbox.create({ name: "test" });
 
 var exec = await sb.run("var name = 'JavaScript'");
 var exec = await sb.run("console.log(`Hello ${name}!`)");
@@ -148,7 +141,7 @@ var exec = await sb.run("console.log(`Hello ${name}!`)");
 console.log(await exec.output()); // prints Hello JavaScript!
 
 await sb.stop();
-``` -->
+```
 
 ##### Python
 
@@ -157,7 +150,7 @@ import asyncio
 from microsandbox import PythonSandbox
 
 async def main():
-    async with PythonSandbox.create() as sb:
+    async with PythonSandbox.create(name="test") as sb:
         exec = await sb.run("name = 'Python'")
         exec = await sb.run("print(f'Hello {name}!')")
 
@@ -166,14 +159,14 @@ async def main():
 asyncio.run(main())
 ```
 
-<!-- ##### Rust
+##### Rust
 
 ```rs
-use microsandbox::PythonSandbox;
+use microsandbox::{SandboxOptions, PythonSandbox};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let sb = PythonSandbox::create().await?;
+    let sb = PythonSandbox::create(SandboxOptions::builder().name("test").build()).await?;
 
     let exec = sb.run(r#"name = "Python""#).await?;
     let exec = sb.run(r#"print(f"Hello {name}")"#).await?;
@@ -182,7 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-``` -->
+```
 
 > [!NOTE]
 >
@@ -260,241 +253,17 @@ Zero-setup deployment means your AI-generated code can be immediately useful wit
 
 <div align='center'>• • •</div>
 
-# <sub><img height="18" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;SELF HOSTING&nbsp;&nbsp;<sup><sup>B E T A</sup></sup></sub>
+# <sub><img height="18" src="https://octicons-col.vercel.app/device-desktop/A770EF">&nbsp;&nbsp;PROJECTS&nbsp;&nbsp;<sup><sup>B E T A</sup></sup></sub>
 
-With self hosting, your data and code stay on your servers making security compliance easy. Also, having a local setup allows you to test and move through ideas fast.
+Beyond its SDK for secure execution of untrusted code, microsandbox supports project-based development with familiar package-manager workflows.
 
-Let's help you start your first self-hosted sandbox server. It's easy!
-
-> [!WARNING]
->
-> `microsandbox` is beta software and not ready for production use.
-
-##
-
-#### 1. Install CLI
-
-```sh
-curl -sSL https://get.microsandbox.dev | sh
-```
-
-This will install the `msb` CLI tool, which helps you manage sandboxes locally.
-
-> [!IMPORTANT]
->
-> The CLI is currently only available for macOS and Linux. **[Windows support is coming soon!](https://github.com/microsandbox/microsandbox/issues/47)**
->
-> **Platform-specific requirements:**
->
-> - <a href="https://microsandbox.dev#gh-light-mode-only" target="_blank"><img src="https://cdn.simpleicons.org/linux/black" height="14"/></a><a href="https://microsandbox.dev#gh-dark-mode-only" target="_blank"><img src="https://cdn.simpleicons.org/linux/white" height="14"/></a> **Linux** — KVM virtualization must be enabled
-> - <a href="https://microsandbox.dev#gh-light-mode-only" target="_blank"><img src="https://cdn.simpleicons.org/apple" height="14"/></a><a href="https://microsandbox.dev#gh-dark-mode-only" target="_blank"><img src="https://cdn.simpleicons.org/apple/white" height="14"/></a> **macOS** — Requires Apple Silicon (M1/M2/M3/M4)
-
-##
-
-#### 2. Start Sandbox Server
-
-```sh
-msb server start
-```
-
-> [!TIP]
->
-> Use `--detach` flag to run the server in the background.
-
-##
-
-#### 3. Generate API Key
-
-```sh
-msb server keygen
-```
-
-##
-
-After starting the server and generating your key, [configure the two environment variables](#1get-api-key) to connect your SDK to your self-hosted sandbox server automatically.
-
-> [!TIP]
->
-> Run `msb server stop` to stop the server.
->
-> See `msb server --help` to see all the available options.
-
-<div align='center'>• • •</div>
-
-# <sub><img height="18" src="https://octicons-col.vercel.app/device-desktop/A770EF">&nbsp;&nbsp;LOCAL SANDBOX MANAGEMENT&nbsp;&nbsp;<sup><sup>B E T A</sup></sup></sub>
-
-The `msb` CLI brings the familiar feel of package managers to sandbox development. Think of it like npm or cargo, but for sandboxes! Create a simple Sandboxfile, define your environments, and run them with easy commands.
-
-> [!WARNING]
->
-> `microsandbox` is beta software and not ready for production use.
-
-##
-
-#### Create a Sandbox Project
-
-```sh
-msb init
-```
-
-This creates a `Sandboxfile` in the current directory, which serves as the configuration manifest for your sandbox environments.
-
-##
-
-#### Add a Sandbox to the Project
-
-```sh
-msb add app \
-    --image python \
-    --cpus 1 \
-    --memory 1024 \
-    --start 'python -c "print(\"hello\")"'
-```
-
-The command above registers a new sandbox named `app` in your Sandboxfile, configured to use the `python` image.
-
-You should now have a `Sandboxfile` containing a sandbox named **`app`**:
-
-```sh
-cat Sandboxfile
-```
-
-```yaml
-# Sandbox configurations
-sandboxes:
-  app:
-    image: python
-    memory: 1024
-    cpus: 1
-    scripts:
-      start: python -c "print(\"hello\")"
-```
-
-> [!TIP]
->
-> Run `msb <subcommand> --help` to see all the options available for a subcommand.
->
-> For example, `msb add --help`.
-
-##
-
-#### Running a Sandbox
-
-##### Run a Sandbox Defined in Your Project
-
-```sh
-msb run --sandbox app
-```
-
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-msb r app
-```
-
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-msr app
-```
-
-This executes the default _start_ script of your sandbox. For more control, you can directly specify which script to run — `msr app~start`.
-
-When running project sandboxes, all file changes and installations made inside the sandbox are automatically persisted to the `./menv` directory. This means you can stop and restart your sandbox any time without losing your work. Your development environment will be exactly as you left it.
-
-##### Run an Temporary Sandbox
-
-For experimentation or one-off tasks, temporary sandboxes provide a clean environment that leaves no trace:
-
-```sh
-msb exe --image python
-```
-
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-msb x python
-```
-
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-msx python
-```
-
-Temporary sandboxes are perfect for isolating programs you get from the internet. Once you exit the sandbox, all changes are completely discarded.
-
-##
-
-#### Installing Sandboxes
-
-The `msb install` command sets up a sandbox as a system-wide executable. It installs a slim launcher program that allows you to start your sandbox from anywhere in your system with a simple command.
-
-```sh
-msb install --image alpine
-```
-
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-msb i alpine
-```
-
-<div align="center">
-
-_**or**_
-
-</div>
-
-```sh
-msi alpine
-```
-
-After installation, you can start your sandbox by simply typing its name in any terminal:
-
-```sh
-alpine
-```
-
-This makes frequently used sandboxes incredibly convenient to access — no need to navigate to specific directories or remember complex commands. Just type the sandbox name and it launches immediately with all your configured settings.
-
-> [!TIP]
-> You can give your sandbox a descriptive, easy-to-remember name during installation:
->
-> ```sh
-> msi alpine:20250108 slim-linux
-> ```
->
-> This allows you to create multiple instances of the same sandbox image with different names and configurations. For example:
->
-> - `msi python python-data-science` - A Python environment for data analysis
-> - `msi python python-web` - A Python environment for web development
->
-> Installed sandboxes maintain their state between sessions, so you can pick up exactly where you left off each time you launch them.
+Think of it like npm or cargo, but for sandboxes! Create a Sandboxfile, define your environments, and manage your sandboxes with simple commands.
 
 <br />
 
 <a href="https://asciinema.org/a/7eOFf2Ovigi473FsKgr3Lpve1" target="_blank"><img src="https://github.com/user-attachments/assets/3a9d1de4-2370-4d5a-a40d-9aa7315aa934" /></a>
+
+See [projects](./PROJECTS.md) for more information.
 
 <div align='center'>• • •</div>
 
