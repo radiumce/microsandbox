@@ -56,6 +56,12 @@ Get started with the SDK in a few easy steps:
 
 <a href="https://asciinema.org/a/zyxUsKm2drfeiIZzyfrhroerp" target="_blank"><img src="https://github.com/user-attachments/assets/1d089394-2a02-4fd2-85f8-82f70f79dc26"  width="2000" /></a>
 
+<div align='center'>
+  <img src="https://img.shields.io/badge/macos-working-green?style=for-the-badge" alt=macos style="margin-bottom: 5px;"/>
+  <img src="https://img.shields.io/badge/linux-wip-yellow?style=for-the-badge" alt=linux style="margin-bottom: 5px;"/>
+  <img src="https://img.shields.io/badge/windows-not_yet_supported-red?style=for-the-badge" alt=windows style="margin-bottom: 5px;"/>
+</div>
+
 ##
 
 <h3><span>1</span>&nbsp;&nbsp;<img height="13" src="https://octicons-col.vercel.app/key/A770EF">&nbsp;&nbsp;Get API Key</h3>
