@@ -71,11 +71,13 @@ Get started with the SDK in a few easy steps:
 
 <h3><span>2</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/move-to-bottom/A770EF">&nbsp;&nbsp;Install SDK</h3>
 
+<!--
 ##### JavaScript
 
 ```sh
 npm install microsandbox
 ```
+-->
 
 ##### Python
 
@@ -83,14 +85,17 @@ npm install microsandbox
 pip install microsandbox
 ```
 
+<!--
 ##### Rust
 
 ```sh
 cargo add microsandbox
 ```
+-->
 
 > [!NOTE]
 > There are [SDKs](./sdk) for other languages as well! Join us in expanding support for your favorite language.
+<!--
 >
 > <div align="left">
 >   <a href="./sdk/c"><img src="https://img.shields.io/badge/C-A8B9CC?style=flat-square&logo=c&logoColor=white" alt="C"></a>
@@ -121,6 +126,7 @@ cargo add microsandbox
 >   <a href="./sdk/swift"><img src="https://img.shields.io/badge/Swift-FA7343?style=flat-square&logo=swift&logoColor=white" alt="Swift"></a>
 >   <a href="./sdk/zig"><img src="https://img.shields.io/badge/Zig-F7A41D?style=flat-square&logo=zig&logoColor=white" alt="Zig"></a>
 > </div>
+-->
 
 ##
 
@@ -128,6 +134,7 @@ cargo add microsandbox
 
 `microsandbox` offers a growing list of sandbox environment types optimized for different execution requirements. Choose the appropriate sandbox (e.g., PythonSandbox or NodeSandbox) to run your code in a secure tailored environment.
 
+<!--
 ##### JavaScript
 
 ```js
@@ -142,6 +149,7 @@ console.log(await exec.output()); // prints Hello JavaScript!
 
 await sb.stop();
 ```
+-->
 
 ##### Python
 
@@ -159,6 +167,7 @@ async def main():
 asyncio.run(main())
 ```
 
+<!--
 ##### Rust
 
 ```rs
@@ -176,6 +185,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+-->
 
 > [!NOTE]
 >
