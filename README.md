@@ -91,16 +91,15 @@ npm install microsandbox
 pip install microsandbox
 ```
 
-<!--
 ##### Rust
 
 ```sh
 cargo add microsandbox
 ```
--->
 
 > [!NOTE]
 > There are [SDKs](./sdk) for other languages as well! Join us in expanding support for your favorite language.
+
 <!--
 >
 > <div align="left">
@@ -173,7 +172,6 @@ async def main():
 asyncio.run(main())
 ```
 
-<!--
 ##### Rust
 
 ```rs
@@ -181,17 +179,18 @@ use microsandbox::{SandboxOptions, PythonSandbox};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let sb = PythonSandbox::create(SandboxOptions::builder().name("test").build()).await?;
+    let mut sb = PythonSandbox::create(SandboxOptions::builder().name("test").build()).await?;
 
     let exec = sb.run(r#"name = "Python""#).await?;
-    let exec = sb.run(r#"print(f"Hello {name}")"#).await?;
+    let exec = sb.run(r#"print(f"Hello {name}!")"#).await?;
 
     println!("{}", exec.output().await?); // prints Hello Python!
+
+    sb.stop().await?;
 
     Ok(())
 }
 ```
--->
 
 > [!NOTE]
 >
