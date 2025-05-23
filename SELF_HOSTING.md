@@ -34,6 +34,8 @@ msb server start
 >
 > Use the `--detach` flag to run the server in the background.
 >
+> Use the `--dev` flag to skip requiring an API key.
+>
 > See `msb server --help` for more options.
 
 ##
@@ -53,6 +55,8 @@ This pulls and caches the images for the SDKs to use. It is what allows you to r
 ##
 
 #### 4. Generate API Key
+
+If you are started the server in **dev** mode, you can skip the API key.
 
 ```sh
 msb server keygen --expire 3mo
