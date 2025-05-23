@@ -55,7 +55,7 @@ To run your ai-generated code, you could try a few things:
 Get started with few easy steps:
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/15299b93-b87d-4635-986b-cbbb2c9916ac" width="800" controls>
+  <video src="https://github.com/user-attachments/assets/14e71fe5-1ac8-4663-8370-08002119e909" width="800" controls>
   </video>
 
 <sup><small><a href="https://asciinema.org/a/itQE92vIJiyq1PAPnaGURzDpv" target="_blank">[ASCIINEMA →]</a></small></sup>
