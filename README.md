@@ -10,40 +10,34 @@
 <br />
 <br />
 
-<div align='center'><a href="./"><img align="centre" width="400" alt="floating-sandbox-bot" src="https://github.com/user-attachments/assets/52ea427f-f2d0-4b7b-bc23-8e729d28453b"></a></div>
-
-<br />
-
 <div align='center'>
   <a href="https://discord.gg/T95Y3XnEAK" target="_blank">
     <img src="https://img.shields.io/badge/discord -%2300acee.svg?color=mediumslateblue&style=for-the-badge&logo=discord&logoColor=white" alt=discord style="margin-bottom: 5px;"/>
   </a>
-  <a href="https://x.com/microsandbox" target="_blank">
-    <img src="https://img.shields.io/badge/x (twitter)-%2300acee.svg?color=000000&style=for-the-badge&logo=x&logoColor=white" alt=x style="margin-bottom: 5px;"/>
+  <a href="https://docs.microsandbox.dev" target="_blank">
+    <img src="https://img.shields.io/badge/documentation-%2300acee.svg?color=ff4500&style=for-the-badge&logo=gitbook&logoColor=white" alt=documentation style="margin-bottom: 5px;"/>
   </a>
-  <a href="https://www.reddit.com/r/microsandbox" target="_blank">
-    <img src="https://img.shields.io/badge/reddit-%2300acee.svg?color=fe4609&style=for-the-badge&logo=reddit&logoColor=white" alt=reddit style="margin-bottom: 5px;"/>
+  <a href="https://x.com/microsandbox" target="_blank">
+    <img src="https://img.shields.io/badge/twitter-%2300acee.svg?color=000000&style=for-the-badge&logo=x&logoColor=white" alt=twitter style="margin-bottom: 5px;"/>
   </a>
 </div>
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/question/A770EF">&nbsp;&nbsp;WHY MICROSANDBOX?</sub>
 
-Building AI agents that generate and execute code? Need to run untrusted user code?
+Ever needed to run code you don't fully trust? Whether it's AI-generated code, user submissions, or experimental code, the traditional options all have serious drawbacks:
 
-Maybe you've tried running the code:
+- **Running locally** - One malicious script and your entire system is compromised
+- **Using containers** - Shared kernels mean sophisticated attacks can still break out
+- **Traditional VMs** - Waiting 10+ seconds for a VM to boot kills productivity and performance
+- **Cloud solutions** - Can get expensive fast and at the whim of the cloud provider
 
-- **Directly on your machine** — Security risk for your machine <a href="https://horizon3.ai/attack-research/disclosures/unsafe-at-any-speed-abusing-python-exec-for-unauth-rce-in-langflow-ai/">[→]</a>
-- **In docker containers** — Limited isolation for untrusted code <a href="./MSB_V_DOCKER.md">[→]</a>
-- **In traditional VMs** — Minutes to start up, heavy resource usage
-- **In cloud sandboxes** — Less control over your infra and lose rapid dev cycles
+**microsandbox** combines the best of all worlds:
 
-**microsandbox** solves all these issues for you with:
-
-- <div><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;True VM-Level Security Isolation with Fast Startup Times</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;Self-Hosted with Full Control and Local Setup</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/sync/A770EF">&nbsp;&nbsp;Seamless Transition from Local to Production</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/stack/A770EF">&nbsp;&nbsp;Compatibility with Standard Container Images</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/plug/A770EF">&nbsp;&nbsp;Integration with Any MCP Enabled AI</div>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;<strong>Bulletproof Security</strong> - True VM isolation with separate kernels</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;<strong>Instant Startup</strong> - Boot times under 200ms, not 10+ seconds</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;<strong>Your Infrastructure</strong> - Self-hosted with complete control</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/package/A770EF">&nbsp;&nbsp;<strong>OCI Compatible</strong> - Works with standard container images</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/dependabot/A770EF">&nbsp;&nbsp;<strong>AI-Ready</strong> - Built-in MCP server for seamless AI integration</span>
 
 <div align='center'>• • •</div>
 
@@ -62,7 +56,7 @@ Get started with in easy steps:
 <div align='center'>
   <img src="https://img.shields.io/badge/macos-working-green?style=for-the-badge" alt=macos style="margin-bottom: 5px;"/>
   <img src="https://img.shields.io/badge/linux-working-green?style=for-the-badge" alt=linux style="margin-bottom: 5px;"/>
-  <img src="https://img.shields.io/badge/windows-wip-yellow?style=for-the-badge" alt=windows style="margin-bottom: 5px;"/>
+  <img src="https://img.shields.io/badge/windows-wip-red?style=for-the-badge" alt=windows style="margin-bottom: 5px;"/>
 </div>
 
 ##
@@ -336,7 +330,7 @@ Zero-setup deployment means your AI-generated code can be immediately useful wit
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/device-desktop/A770EF">&nbsp;&nbsp;PROJECTS&nbsp;&nbsp;<sup><sup>B E T A</sup></sup></sub>
 
-Beyond the SDK, microsandbox supports project-based development with familiar package-manager workflows. Think of it like npm or cargo, but for sandboxes!
+Beyond the SDK, microsandbox supports project-based development with the familiar package-manager workflow devs are used to. Think of it like npm or cargo, but for sandboxes!
 
 Create a `Sandboxfile`, define your environments, and manage your sandboxes with simple commands.
 
