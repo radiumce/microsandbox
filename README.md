@@ -5,7 +5,7 @@
 <img width="100%" src="./assets/microsandbox-banner-xl.png" alt="microsandbox-banner-xl">
 </a>
 
-<div align="center"><b>———&nbsp;&nbsp;&nbsp;secure self-hosted sandboxes for your ai agents&nbsp;&nbsp;&nbsp;———</b></div>
+<div align="center"><b>———&nbsp;&nbsp;&nbsp;easy secure execution of untrusted user/ai code&nbsp;&nbsp;&nbsp;———</b></div>
 
 <br />
 <br />
@@ -28,31 +28,28 @@
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/question/A770EF">&nbsp;&nbsp;WHY MICROSANDBOX?</sub>
 
-Building AI agents that generate and execute code? — You'll need **secure sandboxes**<sup>✨</sup>!
+Building AI agents that generate and execute code? Need to run untrusted user code?
 
-To run your ai-generated code, you could try a few things:
+Maybe you've tried running the code:
 
-- **Run directly on machine?** — Risky for the machine <a href="https://horizon3.ai/attack-research/disclosures/unsafe-at-any-speed-abusing-python-exec-for-unauth-rce-in-langflow-ai/">[→]</a>
-- **Run in docker containers?** — Limited isolation for untrusted code <a href="./MSB_V_DOCKER.md">[→]</a>
-- **Run in traditional VMs?** — Minutes to start up, heavy resource usage
-- **Run in cloud sandboxes?** — Less control over your infra and lose rapid dev cycles
+- **Directly on your machine** — Security risk for your machine <a href="https://horizon3.ai/attack-research/disclosures/unsafe-at-any-speed-abusing-python-exec-for-unauth-rce-in-langflow-ai/">[→]</a>
+- **In docker containers** — Limited isolation for untrusted code <a href="./MSB_V_DOCKER.md">[→]</a>
+- **In traditional VMs** — Minutes to start up, heavy resource usage
+- **In cloud sandboxes** — Less control over your infra and lose rapid dev cycles
 
-**microsandbox** gives you the best of all the worlds, all on your own infrastructure:
+**microsandbox** solves all these issues for you with:
 
 - <div><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;True VM-Level Security Isolation with Fast Startup Times</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;Self-Hosted with Full Control</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;Fast Local Development Iteration Cycles</div>
+- <div><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;Self-Hosted with Full Control and Local Setup</div>
 - <div><img height="15" src="https://octicons-col.vercel.app/sync/A770EF">&nbsp;&nbsp;Seamless Transition from Local to Production</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/lock/A770EF">&nbsp;&nbsp;Data Sovereignty and Privacy</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/stack/A770EF">&nbsp;&nbsp;Compatible with Standard Container Images</div>
-- <div><img height="15" src="https://octicons-col.vercel.app/code-square/A770EF">&nbsp;&nbsp;Wide SDK Ecosystem</div>
+- <div><img height="15" src="https://octicons-col.vercel.app/stack/A770EF">&nbsp;&nbsp;Compatibility with Standard Container Images</div>
 - <div><img height="15" src="https://octicons-col.vercel.app/plug/A770EF">&nbsp;&nbsp;Integration with Any MCP Enabled AI</div>
 
 <div align='center'>• • •</div>
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;QUICK START</sub>
 
-Get started with few easy steps:
+Get started with in easy steps:
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/14e71fe5-1ac8-4663-8370-08002119e909" width="800" controls>
@@ -70,18 +67,29 @@ Get started with few easy steps:
 
 ##
 
-<h3><span>1</span>&nbsp;&nbsp;<img height="13" src="https://octicons-col.vercel.app/key/A770EF">&nbsp;&nbsp;Get API Key</h3>
+<h3><span>1</span>&nbsp;&nbsp;<img height="13" src="https://octicons-col.vercel.app/north-star/A770EF">&nbsp;&nbsp;Start the Server</h3>
 
-- Get your API key by <a href="./SELF_HOSTING.md">[<small>SELF HOSTING →</small>]</a>
-- Set the `MSB_API_KEY` environment variable to the key.
+##### Install microsandbox
 
-  ```sh
-  export MSB_API_KEY=msb_***
-  ```
+```sh
+curl -sSL https://get.microsandbox.dev | sh
+```
+
+##### And start the server
+
+```sh
+msb server start --dev
+```
+
+> [!TIP]
+>
+> microsandbox server is also an [MCP server](https://modelcontextprotocol.io), so it works directly with Cursor, Agno, and other MCP-enabled AI tools and agents.
+>
+> For more information on setting up the server, see the [self-hosting guide](./SELF_HOSTING.md).
 
 ##
 
-<h3><span>2</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/move-to-bottom/A770EF">&nbsp;&nbsp;Install SDK</h3>
+<h3><span>2</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/move-to-bottom/A770EF">&nbsp;&nbsp;Install the SDK</h3>
 
 ##### Python
 
@@ -139,7 +147,7 @@ cargo add microsandbox
 
 ##
 
-<h3><span>3</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/file-binary/A770EF">&nbsp;&nbsp;Execute Code in Sandbox</h3>
+<h3><span>3</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/file-binary/A770EF">&nbsp;&nbsp;Execute the Code</h3>
 
 `microsandbox` offers a growing list of sandbox environment types optimized for different execution requirements. Choose the appropriate sandbox (e.g., PythonSandbox or NodeSandbox) to run your code in a secure tailored environment.
 
@@ -231,15 +239,15 @@ flowchart TB
 
     %% ── Individual MicroVMs ────────────────
     subgraph VM1["microVM"]
-        VM1S["python sandbox"]
+        VM1S["python environment"]
     end
 
     subgraph VM2["microVM"]
-        VM2S["python sandbox"]
+        VM2S["python environment"]
     end
 
     subgraph VM3["microVM"]
-        VM3S["node sandbox"]
+        VM3S["node environment"]
     end
 
     D --> VM1S
@@ -255,7 +263,6 @@ flowchart TB
     style VM2S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
     style VM3S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
 ```
-
 
 <br />
 
@@ -483,3 +490,17 @@ For contribution guidelines, please refer to [CONTRIBUTING.md](./CONTRIBUTING.md
 # <sub><img height="18" src="https://octicons-col.vercel.app/law/A770EF">&nbsp;&nbsp;LICENSE</sub>
 
 This project is licensed under the [Apache License 2.0](./LICENSE).
+
+<div align='center'>• • •</div>
+
+# <sub><img height="18" src="https://octicons-col.vercel.app/star/A770EF">&nbsp;&nbsp;STAR HISTORY</sub>
+
+We appreciate all the support!
+
+<div align='center'>
+  <img src="https://api.star-history.com/svg?repos=microsandbox/microsandbox&type=Date">
+</div>
+
+<br />
+
+<div align='center'>• • •</div>
