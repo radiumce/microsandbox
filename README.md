@@ -43,7 +43,7 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 Get started with in easy steps:
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/14e71fe5-1ac8-4663-8370-08002119e909" width="800" controls>
+  <video src="https://github.com/user-attachments/assets/23618f92-5897-44d1-bfa6-1058f30c09ef" width="800" controls>
   </video>
 
 <sup><small><a href="https://asciinema.org/a/itQE92vIJiyq1PAPnaGURzDpv" target="_blank">[ASCIINEMA →]</a></small></sup>
