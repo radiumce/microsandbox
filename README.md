@@ -486,10 +486,16 @@ This project is licensed under the [Apache License 2.0](./LICENSE).
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/star/A770EF">&nbsp;&nbsp;STAR HISTORY</sub>
 
-We appreciate all the support!
+Thanks for all the support!
 
 <div align='center'>
-  <img src="https://api.star-history.com/svg?repos=microsandbox/microsandbox&type=Date">
+  <a href="https://star-history.com/#microsandbox/microsandbox&Date">
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=microsandbox/microsandbox&type=Date&theme=dark" />
+     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=microsandbox/microsandbox&type=Date" />
+     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=microsandbox/microsandbox&type=Date" />
+   </picture>
+  </a>
 </div>
 
 <br />
