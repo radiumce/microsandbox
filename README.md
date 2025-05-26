@@ -78,6 +78,12 @@ msb server start --dev
 >
 > For more information on setting up the server, see the [self-hosting guide](./SELF_HOSTING.md).
 
+##### Optionally pull the environment image
+
+```sh
+msb pull microsandbox/python
+```
+
 ##
 
 <h3><span>2</span>&nbsp;&nbsp;<img height="14" src="https://octicons-col.vercel.app/move-to-bottom/A770EF">&nbsp;&nbsp;Install the SDK</h3>
@@ -201,7 +207,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 > [!NOTE]
 >
-> When you run the code for the first time, it will take a while to download the sandbox image unless you already have it downloaded. After that, it will run much faster.
+> If you haven't pulled the environment image, the first run will take a while as it tries to download it. 
+> Executions will be much faster afterwards.
 >
 > For more information on how to use the SDK, [check out the SDK README](./sdk/README.md).
 
