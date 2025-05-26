@@ -12,7 +12,7 @@ Learn how to integrate microsandbox with AI tools using the Model Context Protoc
 
 ### Overview
 
-The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open standard that enables AI applications to securely connect to external data sources and tools. microsandbox implements MCP as a built-in server, making it compatible with AI tools like Claude Desktop, Cursor, and other MCP-enabled applications.
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open standard that enables AI applications to securely connect to external data sources and tools. microsandbox implements MCP as a built-in server, making it compatible with AI tools like Claude, and other MCP-enabled applications.
 
 ---
 
@@ -319,7 +319,7 @@ asyncio.run(main())
 
 microsandbox works with any MCP-compatible application:
 
-- **Cursor** - AI-powered code editor
+- **Claude** - AI chat application
 - **Custom MCP clients** - Build your own integrations
 
 ---
@@ -346,26 +346,6 @@ Ask Claude: "Can you start a Python sandbox and run a simple calculation?"
    - Call `sandbox_start` to create a new Python environment
    - Call `sandbox_run_code` to execute your calculation
    - Return the results in a natural language response
-
-#### Advanced Usage
-
-**Data Analysis Workflow:**
-
-```
-"Create a Python sandbox, install pandas, and analyze this CSV data: [paste data]"
-```
-
-**Web Development:**
-
-```
-"Start a Node.js sandbox and create a simple HTML generator script"
-```
-
-**Multi-step Processing:**
-
-```
-"Create a sandbox, download some data, process it, and create a visualization"
-```
 
 ---
 

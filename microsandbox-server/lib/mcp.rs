@@ -18,8 +18,9 @@ use crate::{
         forward_rpc_to_portal, sandbox_get_metrics_impl, sandbox_start_impl, sandbox_stop_impl,
     },
     payload::{
-        JsonRpcError, JsonRpcRequest, JsonRpcResponse, SandboxMetricsGetParams, SandboxStartParams,
-        SandboxStopParams, JSONRPC_VERSION,
+        JsonRpcError, JsonRpcRequest, JsonRpcResponse, JsonRpcResponseOrNotification,
+        ProcessedNotification, SandboxMetricsGetParams, SandboxStartParams, SandboxStopParams,
+        JSONRPC_VERSION,
     },
     state::AppState,
     ServerResult,
@@ -30,7 +31,7 @@ use crate::{
 //--------------------------------------------------------------------------------------------------
 
 /// MCP protocol version
-const MCP_PROTOCOL_VERSION: &str = "2024-11-05";
+const MCP_PROTOCOL_VERSION: &str = "2025-03-26";
 
 /// Server information
 const SERVER_NAME: &str = "microsandbox-server";
@@ -77,7 +78,7 @@ pub async fn handle_mcp_list_tools(
         "tools": [
             {
                 "name": "sandbox_start",
-                "description": "Start a new sandbox with specified configuration. This creates an isolated environment for code execution. IMPORTANT: Always stop the sandbox when done to prevent it from running indefinitely and consuming resources.",
+                "description": "Start a new sandbox with specified configuration. This creates an isolated environment for code execution. IMPORTANT: Always stop the sandbox when done to prevent it from running indefinitely and consuming resources. SUPPORTED IMAGES: Only 'microsandbox/python' (for Python code) and 'microsandbox/node' (for Node.js code) are currently supported.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -95,7 +96,8 @@ pub async fn handle_mcp_list_tools(
                             "properties": {
                                 "image": {
                                     "type": "string",
-                                    "description": "Docker image to use"
+                                    "description": "Docker image to use. Only 'microsandbox/python' and 'microsandbox/node' are supported.",
+                                    "enum": ["microsandbox/python", "microsandbox/node"]
                                 },
                                 "memory": {
                                     "type": "integer",
@@ -555,17 +557,48 @@ pub async fn handle_mcp_call_tool(
     Ok(JsonRpcResponse::success(mcp_result, request.id))
 }
 
+/// Handle MCP notifications/initialized request
+pub async fn handle_mcp_notifications_initialized(
+    _state: AppState,
+    _request: JsonRpcRequest,
+) -> ServerResult<ProcessedNotification> {
+    debug!("Handling MCP notifications/initialized");
+
+    // This is a notification - no response is expected
+    // The client is indicating it has finished initialization
+    Ok(ProcessedNotification::processed())
+}
+
 /// Handle MCP methods
 pub async fn handle_mcp_method(
     state: AppState,
     request: JsonRpcRequest,
-) -> ServerResult<JsonRpcResponse> {
+) -> ServerResult<JsonRpcResponseOrNotification> {
     match request.method.as_str() {
-        "initialize" => handle_mcp_initialize(state, request).await,
-        "tools/list" => handle_mcp_list_tools(state, request).await,
-        "tools/call" => handle_mcp_call_tool(state, request).await,
-        "prompts/list" => handle_mcp_list_prompts(state, request).await,
-        "prompts/get" => handle_mcp_get_prompt(state, request).await,
+        "initialize" => {
+            let response = handle_mcp_initialize(state, request).await?;
+            Ok(JsonRpcResponseOrNotification::response(response))
+        }
+        "tools/list" => {
+            let response = handle_mcp_list_tools(state, request).await?;
+            Ok(JsonRpcResponseOrNotification::response(response))
+        }
+        "tools/call" => {
+            let response = handle_mcp_call_tool(state, request).await?;
+            Ok(JsonRpcResponseOrNotification::response(response))
+        }
+        "prompts/list" => {
+            let response = handle_mcp_list_prompts(state, request).await?;
+            Ok(JsonRpcResponseOrNotification::response(response))
+        }
+        "prompts/get" => {
+            let response = handle_mcp_get_prompt(state, request).await?;
+            Ok(JsonRpcResponseOrNotification::response(response))
+        }
+        "notifications/initialized" => {
+            let notification = handle_mcp_notifications_initialized(state, request).await?;
+            Ok(JsonRpcResponseOrNotification::notification(notification))
+        }
         _ => Err(ServerError::NotFound(format!(
             "MCP method '{}' not found",
             request.method

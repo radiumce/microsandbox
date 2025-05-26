@@ -26,7 +26,7 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 - **Running locally** - One malicious script and your entire system is compromised
 - **Using containers** - Shared kernels mean sophisticated attacks can still break out
 - **Traditional VMs** - Waiting 10+ seconds for a VM to boot kills productivity and performance
-- **Cloud solutions** - Can get expensive fast and at the whim of the cloud provider
+- **Cloud solutions** - Not as flexible, at the whim of the cloud provider
 
 **microsandbox** combines the best of all worlds:
 
@@ -74,7 +74,7 @@ msb server start --dev
 
 > [!TIP]
 >
-> microsandbox server is also an [MCP server](./MCP.md), so it works directly with Cursor, Agno, and other MCP-enabled AI tools and agents.
+> microsandbox server is also an [MCP server](./MCP.md), so it works directly with Claude, and other MCP-enabled AI tools and agents.
 >
 > For more information on setting up the server, see the [self-hosting guide](./SELF_HOSTING.md).
 
