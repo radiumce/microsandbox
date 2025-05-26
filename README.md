@@ -40,7 +40,7 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;QUICK START</sub>
 
-Get started with in easy steps:
+Get started in few easy steps:
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/23618f92-5897-44d1-bfa6-1058f30c09ef" width="800" controls>
