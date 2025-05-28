@@ -19,6 +19,13 @@
   </a>
 </div>
 
+<br />
+<br />
+
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/8c9c68ff-32ee-434a-b07a-b3309a0e1742" width="100" controls></video>
+</div>
+
 # <sub><img height="18" src="https://octicons-col.vercel.app/question/A770EF">&nbsp;&nbsp;WHY MICROSANDBOX?</sub>
 
 Ever needed to run code you don't fully trust? Whether it's AI-generated code, user submissions, or experimental code, the traditional options all have serious drawbacks:
