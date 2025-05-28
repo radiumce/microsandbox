@@ -37,7 +37,7 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 
 **microsandbox** combines the best of all worlds:
 
-- [x] <span><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;<strong>Bulletproof Security</strong> - True VM isolation with separate kernels</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;<strong>Bulletproof Security</strong> - True VM isolation with [microVMs](./MSB_V_DOCKER.md)</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;<strong>Instant Startup</strong> - Boot times under 200ms, not 10+ seconds</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;<strong>Your Infrastructure</strong> - Self-hosted with complete control</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/package/A770EF">&nbsp;&nbsp;<strong>OCI Compatible</strong> - Works with standard container images</span>
