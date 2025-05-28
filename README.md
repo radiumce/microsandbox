@@ -8,10 +8,13 @@
 <div align="center"><b>———&nbsp;&nbsp;&nbsp;easy secure execution of untrusted user/ai code&nbsp;&nbsp;&nbsp;———</b></div>
 
 <br />
+<br />
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/8c9c68ff-32ee-434a-b07a-b3309a0e1742" width="100" controls></video>
 </div>
+
+<br />
 
 <div align='center'>
   <a href="https://docs.microsandbox.dev" target="_blank">
@@ -21,6 +24,8 @@
     <img src="https://img.shields.io/badge/discord -%2300acee.svg?color=mediumslateblue&style=for-the-badge&logo=discord&logoColor=white" alt=discord style="margin-bottom: 5px;"/>
   </a>
 </div>
+
+<br />
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/question/A770EF">&nbsp;&nbsp;WHY MICROSANDBOX?</sub>
 
