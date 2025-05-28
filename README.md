@@ -34,7 +34,7 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;<strong>Instant Startup</strong> - Boot times under 200ms, not 10+ seconds</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;<strong>Your Infrastructure</strong> - Self-hosted with complete control</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/package/A770EF">&nbsp;&nbsp;<strong>OCI Compatible</strong> - Works with standard container images</span>
-- [x] <span><img height="15" src="https://octicons-col.vercel.app/dependabot/A770EF">&nbsp;&nbsp;<strong>AI-Ready</strong> - Built-in MCP server for seamless AI integration</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/dependabot/A770EF">&nbsp;&nbsp;<strong>AI-Ready</strong> - Built-in [MCP server](./MCP.md) for seamless AI integration</span>
 
 <div align='center'>• • •</div>
 
