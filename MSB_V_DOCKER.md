@@ -2,7 +2,7 @@
 
 ## 1. Enterprise-Grade Security without Performance Tradeoffs
 
-Microsandbox fundamentally reimagines isolation security through hardware-virtualized boundaries:
+Microsandbox enables stronger isolation security through hardware-virtualized boundaries:
 
 - **Docker** uses container technology with process-level isolation through Linux namespaces and cgroups. While efficient, all containers share the host kernel—creating a potential attack vector that has led to numerous CVEs allowing container escapes.
 
