@@ -7,11 +7,15 @@
 
 <div align="center"><b>———&nbsp;&nbsp;&nbsp;easy secure execution of untrusted user/ai code&nbsp;&nbsp;&nbsp;———</b></div>
 
-<br />
-<br />
+<!--
+<div align="center">
+  <br />
+  <video src="https://github.com/user-attachments/assets/8c9c68ff-32ee-434a-b07a-b3309a0e1742" width="500" controls></video>
+</div> -->
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/8c9c68ff-32ee-434a-b07a-b3309a0e1742" width="100" controls></video>
+  <br />
+  <img alt="Claude MCP Demo" src="https://github.com/user-attachments/assets/d91df12c-e425-48c0-a881-dec9a8d45868" width="500"></img>
 </div>
 
 <br />
@@ -42,11 +46,11 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;<strong>Instant Startup</strong> - Boot times under 200ms, not 10+ seconds</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;<strong>Your Infrastructure</strong> - Self-hosted with complete control</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/package/A770EF">&nbsp;&nbsp;<strong>OCI Compatible</strong> - Works with standard container images</span>
-- [x] <span><img height="15" src="https://octicons-col.vercel.app/dependabot/A770EF">&nbsp;&nbsp;<strong>AI-Ready</strong> - Built-in [MCP server](./MCP.md) for seamless AI integration</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/dependabot/A770EF">&nbsp;&nbsp;<strong>AI-Ready</strong> - Built-in [MCP support](./MCP.md) for seamless AI integration</span>
 
 <div align='center'>• • •</div>
 
-# <sub><img height="18" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;QUICK START</sub>
+# <sub><img height="18" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;SDK QUICK START</sub>
 
 Get started in few easy steps:
 
@@ -219,62 +223,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 > Executions will be much faster afterwards.
 >
 > For more information on how to use the SDK, [check out the SDK README](./sdk/README.md).
-
-### Architecture
-
-###
-
-```mermaid
-flowchart TB
-    %% ── Client side ──────────────────────────
-    subgraph ClientProcess["process"]
-        A["Your Business Logic"]
-        B["microsandbox SDK"]
-        A -->|calls| B
-    end
-
-    %% ── Server side ─────────────────────────
-    subgraph ServerProcess["process"]
-        C["microsandbox server"]
-    end
-    B -->|sends untrusted code to| C
-
-    %% ── Branching hub ───────────────────────
-    D([ ])
-    C -->|runs code in| D
-
-    %% ── Individual MicroVMs ────────────────
-    subgraph VM1["microVM"]
-        VM1S["python environment"]
-    end
-
-    subgraph VM2["microVM"]
-        VM2S["python environment"]
-    end
-
-    subgraph VM3["microVM"]
-        VM3S["node environment"]
-    end
-
-    D --> VM1S
-    D --> VM2S
-    D --> VM3S
-
-    %% ── Styling ─────────────────────────────
-    style A    fill:#D6EAF8,stroke:#2E86C1,stroke-width:2px,color:#000000
-    style B    fill:#D6EAF8,stroke:#2E86C1,stroke-width:2px,color:#000000
-    style C    fill:#D5F5E3,stroke:#28B463,stroke-width:2px,color:#000000
-    style D    fill:#F4F6F6,stroke:#ABB2B9,stroke-width:2px,color:#000000
-    style VM1S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
-    style VM2S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
-    style VM3S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
-```
-
-<br />
-
-<!-- TODO: https://github.com/user-attachments/assets/ba466d45-75dd-45ac-917b-0a56c5742e23 -->
-
-<div align='center'>• • •</div>
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/device-desktop/A770EF">&nbsp;&nbsp;PROJECTS&nbsp;&nbsp;<sup><sup>B E T A</sup></sup></sub>
 
@@ -482,6 +430,56 @@ Zero-setup deployment means your AI-generated code can be immediately useful wit
 <!-- Transparent pixel to create line break after floating image -->
 
 <img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
+
+<div align='center'>• • •</div>
+
+### The Server Architecture
+
+```mermaid
+flowchart TB
+    %% ── Client side ──────────────────────────
+    subgraph ClientProcess["process"]
+        A["Your Business Logic"]
+        B["microsandbox SDK"]
+        A -->|calls| B
+    end
+
+    %% ── Server side ─────────────────────────
+    subgraph ServerProcess["process"]
+        C["microsandbox server"]
+    end
+    B -->|sends untrusted code to| C
+
+    %% ── Branching hub ───────────────────────
+    D([ ])
+    C -->|runs code in| D
+
+    %% ── Individual MicroVMs ────────────────
+    subgraph VM1["microVM"]
+        VM1S["python environment"]
+    end
+
+    subgraph VM2["microVM"]
+        VM2S["python environment"]
+    end
+
+    subgraph VM3["microVM"]
+        VM3S["node environment"]
+    end
+
+    D --> VM1S
+    D --> VM2S
+    D --> VM3S
+
+    %% ── Styling ─────────────────────────────
+    style A    fill:#D6EAF8,stroke:#2E86C1,stroke-width:2px,color:#000000
+    style B    fill:#D6EAF8,stroke:#2E86C1,stroke-width:2px,color:#000000
+    style C    fill:#D5F5E3,stroke:#28B463,stroke-width:2px,color:#000000
+    style D    fill:#F4F6F6,stroke:#ABB2B9,stroke-width:2px,color:#000000
+    style VM1S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
+    style VM2S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
+    style VM3S fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px,color:#000000
+```
 
 <div align='center'>• • •</div>
 
