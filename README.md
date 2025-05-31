@@ -42,9 +42,9 @@ Ever needed to run code you don't fully trust? Whether it's AI-generated code, u
 
 **microsandbox** combines the best of all worlds:
 
-- [x] <span><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;<strong>Bulletproof Security</strong> - True VM isolation with [microVMs](./MSB_V_DOCKER.md)</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/shield-lock/A770EF">&nbsp;&nbsp;<strong>Strong Isolation</strong> - Hardware-level VM isolation with [microVMs](./MSB_V_DOCKER.md)</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/zap/A770EF">&nbsp;&nbsp;<strong>Instant Startup</strong> - Boot times under 200ms, not 10+ seconds</span>
-- [x] <span><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;<strong>Your Infrastructure</strong> - Self-hosted with complete control</span>
+- [x] <span><img height="15" src="https://octicons-col.vercel.app/home/A770EF">&nbsp;&nbsp;<strong>Your Infrastructure</strong> - Self-hosted with full control</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/package/A770EF">&nbsp;&nbsp;<strong>OCI Compatible</strong> - Works with standard container images</span>
 - [x] <span><img height="15" src="https://octicons-col.vercel.app/dependabot/A770EF">&nbsp;&nbsp;<strong>AI-Ready</strong> - Built-in [MCP support](./MCP.md) for seamless AI integration</span>
 
@@ -323,7 +323,7 @@ _**or**_
 msx python
 ```
 
-Temporary sandboxes are perfect for isolating programs you get from the internet. Once you exit the sandbox, all changes are completely discarded.
+Temporary sandboxes are perfect for isolating programs you get from the internet. Once you exit the sandbox, all changes are discarded automatically.
 
 ##
 
@@ -378,7 +378,7 @@ This makes frequently used sandboxes incredibly convenient to access — no need
 
 Let your AI agents build real apps with professional dev tools. When users ask their AI to create a web app, fix a bug, or build a prototype, it can handle everything from Git operations to dependency management to testing in a protected environment.
 
-Your AI can create complete development environments in milliseconds and run programs with full system access. The fast startup means developers get instant feedback and can iterate quickly. This makes it perfect for AI pair programming, coding education platforms, and automated code generation where quick results matter.
+Your AI can create comprehensive development environments in milliseconds and run programs with full system access. The fast startup means developers get instant feedback and can iterate quickly. This makes it perfect for AI pair programming, coding education platforms, and automated code generation where quick results matter.
 
 <!-- TODO: <div align="center"><a href="https://microsandbox.dev/docs/examples/coding">✨ See coding examples ✨</a></div> -->
 
