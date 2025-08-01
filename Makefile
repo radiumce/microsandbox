@@ -57,7 +57,7 @@ endif
 # -----------------------------------------------------------------------------
 # Phony Targets Declaration
 # -----------------------------------------------------------------------------
-.PHONY: all build install clean build_libkrun example bench bin _run_example _run_bench _run_bin help uninstall microsandbox _build_aliases
+.PHONY: all build install clean build_libkrun example bench bin _run_example _run_bench _run_bin help uninstall microsandbox _build_aliases dev-setup dev-install dev-clean
 
 # -----------------------------------------------------------------------------
 # Main Targets
@@ -168,30 +168,57 @@ build_libkrun:
 	@:
 
 # -----------------------------------------------------------------------------
+# Development Targets
+# -----------------------------------------------------------------------------
+dev-setup:
+	@echo "Setting up development environment..."
+	@chmod +x scripts/setup_dev_env.sh
+	@./scripts/setup_dev_env.sh
+
+dev-install: dev-setup build install
+	@echo "Development installation complete!"
+	@echo "You can now use: msb --version"
+
+dev-clean: clean
+	@echo "Cleaning development environment..."
+	@rm -rf build/
+	@rm -rf ~/.local/bin/msb*
+	@rm -rf ~/.local/bin/msr ~/.local/bin/msx ~/.local/bin/msi
+	@rm -rf ~/.local/lib/libkrun* ~/.local/lib/libkrunfw*
+
+# -----------------------------------------------------------------------------
 # Help Documentation
 # -----------------------------------------------------------------------------
 help:
 	@echo "Microsandbox Makefile Help"
 	@echo "======================"
 	@echo
-	@echo "Main Targets:"
+	@echo "🚀 Quick Start for Developers:"
+	@echo "  make dev-install              - One-command setup: environment + build + install"
+	@echo "  make dev-setup                - Setup development environment only"
+	@echo "  make dev-clean                - Clean everything (build + installed files)"
+	@echo
+	@echo "📦 Main Targets:"
 	@echo "  make build                    - Build microsandbox components (release mode, no LTO)"
 	@echo "  make install                  - Install binaries and libraries to ~/.local/{bin,lib}"
 	@echo "  make uninstall                - Remove all installed components"
 	@echo "  make clean                    - Remove build artifacts"
 	@echo "  make build_libkrun            - Build libkrun dependency"
 	@echo
-	@echo "Build Modes:"
+	@echo "🔧 Build Modes:"
 	@echo "  make build                    - Build in release mode (fast, no LTO)"
 	@echo "  make DEBUG=1 build            - Build in debug mode"
 	@echo "  make DEBUG=1 install          - Install debug build"
 	@echo
-	@echo "LTO Control (Link Time Optimization):"
+	@echo "⚡ LTO Control (Link Time Optimization):"
 	@echo "  make LTO=1 build              - Enable LTO for smaller binary (slower build)"
 	@echo "  make LTO=1 install            - Install with LTO optimization"
 	@echo "  make LTO=0 build              - Disable LTO (default, faster build)"
 	@echo
-	@echo "Examples:"
+	@echo "📋 Examples:"
+	@echo "  # 🎯 Recommended for new developers"
+	@echo "  make dev-install"
+	@echo
 	@echo "  # Standard release build (fast, no LTO)"
 	@echo "  make build"
 	@echo
@@ -201,11 +228,5 @@ help:
 	@echo "  # Debug build for development"
 	@echo "  make DEBUG=1 build"
 	@echo
-	@echo "  # Install standard release build"
-	@echo "  make install"
-	@echo
-	@echo "  # Install optimized build with LTO"
-	@echo "  make LTO=1 install"
-	@echo
-	@echo "Note: LTO (Link Time Optimization) is now disabled by default for faster builds."
+	@echo "💡 Note: LTO (Link Time Optimization) is now disabled by default for faster builds."
 	@echo "      Enable it with LTO=1 for smaller, more optimized binaries."

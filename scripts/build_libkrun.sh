@@ -270,6 +270,82 @@ check_success() {
   fi
 }
 
+# Function to download prebuilt libraries
+download_prebuilt_libs() {
+  info "Attempting to use prebuilt libraries..."
+  
+  local version="0.2.6"
+  local platform_suffix
+  
+  case "$OS_TYPE" in
+    Darwin)
+      platform_suffix="darwin-arm64"
+      ;;
+    Linux)
+      case "$(uname -m)" in
+        x86_64) platform_suffix="linux-x86_64" ;;
+        aarch64|arm64) platform_suffix="linux-arm64" ;;
+        *) 
+          warn "Unsupported architecture for prebuilt libs: $(uname -m)"
+          return 1
+          ;;
+      esac
+      ;;
+    *)
+      warn "Unsupported OS for prebuilt libs: $OS_TYPE"
+      return 1
+      ;;
+  esac
+  
+  local archive_name="microsandbox-${version}-${platform_suffix}.tar.gz"
+  local download_url="https://github.com/microsandbox/microsandbox/releases/download/microsandbox-v${version}/${archive_name}"
+  local temp_dir="/tmp/microsandbox-prebuilt-$$"
+  
+  mkdir -p "$temp_dir"
+  cd "$temp_dir" || return 1
+  
+  info "Downloading prebuilt libraries from: $download_url"
+  if curl -L -f -o "$archive_name" "$download_url" 2>/dev/null; then
+    if tar -xzf "$archive_name" 2>/dev/null; then
+      local extract_dir="microsandbox-${version}-${platform_suffix}"
+      
+      case "$OS_TYPE" in
+        Darwin)
+          if [[ -f "$extract_dir/libkrun.1.dylib" && -f "$extract_dir/libkrunfw.4.dylib" ]]; then
+            cp "$extract_dir/libkrun.1.dylib" "$BUILD_DIR/"
+            cp "$extract_dir/libkrunfw.4.dylib" "$BUILD_DIR/"
+            
+            cd "$BUILD_DIR" || return 1
+            ln -sf libkrun.1.dylib libkrun.dylib
+            ln -sf libkrunfw.4.dylib libkrunfw.dylib
+            
+            info "Successfully installed prebuilt libraries"
+            rm -rf "$temp_dir"
+            return 0
+          fi
+          ;;
+        Linux)
+          if ls "$extract_dir"/*.so.* >/dev/null 2>&1; then
+            cp "$extract_dir"/*.so.* "$BUILD_DIR/"
+            
+            cd "$BUILD_DIR" || return 1
+            ln -sf libkrun.so.* libkrun.so 2>/dev/null || true
+            ln -sf libkrunfw.so.* libkrunfw.so 2>/dev/null || true
+            
+            info "Successfully installed prebuilt libraries"
+            rm -rf "$temp_dir"
+            return 0
+          fi
+          ;;
+      esac
+    fi
+  fi
+  
+  rm -rf "$temp_dir"
+  warn "Failed to download or extract prebuilt libraries"
+  return 1
+}
+
 # Common function to check for existing installations
 check_existing_lib() {
     if [ "$FORCE_BUILD" = true ]; then
@@ -446,18 +522,25 @@ build_libkrun() {
 }
 
 # Main script execution
-check_existing_lib "libkrunfw"
-if [ $? -eq 0 ]; then
-    create_build_directory
-    clone_repo "$LIBKRUNFW_REPO" "libkrunfw" --single-branch --branch develop
-    build_libkrunfw
-fi
+create_build_directory
 
-check_existing_lib "libkrun"
-if [ $? -eq 0 ]; then
-    create_build_directory
-    clone_repo "$LIBKRUN_REPO" "libkrun" --single-branch --branch develop
-    build_libkrun
+# Try to use prebuilt libraries first
+if download_prebuilt_libs; then
+    info "Using prebuilt libraries, skipping source build"
+else
+    warn "Prebuilt libraries not available, falling back to source build"
+    
+    check_existing_lib "libkrunfw"
+    if [ $? -eq 0 ]; then
+        clone_repo "$LIBKRUNFW_REPO" "libkrunfw" --single-branch --branch develop
+        build_libkrunfw
+    fi
+
+    check_existing_lib "libkrun"
+    if [ $? -eq 0 ]; then
+        clone_repo "$LIBKRUN_REPO" "libkrun" --single-branch --branch develop
+        build_libkrun
+    fi
 fi
 
 # Finished

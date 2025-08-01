@@ -483,9 +483,30 @@ flowchart TB
 
 # <sub><img height="18" src="https://octicons-col.vercel.app/gear/A770EF">&nbsp;&nbsp;DEVELOPMENT</sub>
 
-Interested in contributing to microsandbox? Check out our [Development Guide](./DEVELOPMENT.md) for instructions on setting up your development environment, building the project, running tests, and creating releases.
+## 🚀 Quick Start for Developers
 
-For contribution guidelines, please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
+Want to contribute or build from source? We've made it super simple:
+
+```bash
+git clone https://github.com/microsandbox/microsandbox.git
+cd microsandbox
+make dev-install
+```
+
+That's it! This single command will:
+- ✅ Check and install all dependencies
+- ✅ Download prebuilt libkrun libraries  
+- ✅ Build microsandbox from source
+- ✅ Install everything to `~/.local/bin`
+- ✅ Configure your environment
+
+For detailed instructions, see our [Development Quick Start Guide](./DEVELOPMENT_QUICKSTART.md).
+
+## 📚 More Development Resources
+
+- [Development Guide](./DEVELOPMENT.md) - Comprehensive development documentation
+- [Contributing Guidelines](./CONTRIBUTING.md) - How to contribute to the project
+- [Development Quick Start](./DEVELOPMENT_QUICKSTART.md) - Get started in minutes
 
 <div align='center'>• • •</div>
 

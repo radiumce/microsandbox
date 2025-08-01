@@ -1,0 +1,42 @@
+{
+    "name": "Microsandbox Development",
+    "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
+    
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "configureZshAsDefaultShell": true,
+            "installOhMyZsh": true
+        },
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "vadimcn.vscode-lldb",
+                "serayuzgur.crates",
+                "tamasfe.even-better-toml",
+                "ms-vscode.makefile-tools"
+            ],
+            "settings": {
+                "rust-analyzer.cargo.features": ["cli"],
+                "rust-analyzer.checkOnSave.command": "clippy"
+            }
+        }
+    },
+    
+    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y patchelf bc libelf-dev gcc flex bison python3-pip && pip3 install pyelftools",
+    
+    "remoteUser": "vscode",
+    
+    "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+    
+    "runArgs": [
+        "--privileged"
+    ]
+}
