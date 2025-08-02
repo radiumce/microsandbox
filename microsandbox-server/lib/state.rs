@@ -18,6 +18,7 @@ use getset::Getters;
 use crate::{
     config::Config,
     port::{PortManager, LOCALHOST_IP},
+    simplified_mcp::{SessionManager, ConfigurationManager},
     ServerError, ServerResult,
 };
 
@@ -34,6 +35,9 @@ pub struct AppState {
 
     /// The port manager for handling sandbox port assignments
     port_manager: Arc<RwLock<PortManager>>,
+
+    /// The session manager for simplified MCP operations
+    session_manager: Arc<SessionManager>,
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -43,9 +47,20 @@ pub struct AppState {
 impl AppState {
     /// Create a new application state instance
     pub fn new(config: Arc<Config>, port_manager: Arc<RwLock<PortManager>>) -> Self {
+        // Create simplified MCP configuration from environment
+        let mcp_config = ConfigurationManager::from_env()
+            .unwrap_or_else(|e| {
+                tracing::warn!("Failed to load MCP configuration from environment: {}. Using defaults.", e);
+                ConfigurationManager::default()
+            });
+        
+        // Create session manager with the configuration
+        let session_manager = Arc::new(SessionManager::new(mcp_config));
+
         Self {
             config,
             port_manager,
+            session_manager,
         }
     }
 
