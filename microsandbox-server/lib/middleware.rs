@@ -187,7 +187,12 @@ pub async fn mcp_smart_auth_middleware(
         .unwrap_or("unknown");
 
     // Check if this is a tool execution method that requires namespace validation
-    let requires_namespace_validation = matches!(method, "tools/call");
+    // Protocol methods that do not require namespace validation.
+    // We can add more methods here as the MCP spec evolves.
+    let requires_namespace_validation = matches!(
+        method,
+        "callTool"
+    );
 
     if requires_namespace_validation {
         // Extract namespace from params for tool execution methods

@@ -1581,6 +1581,7 @@ dependencies = [
  "chrono",
  "clap",
  "console",
+ "dotenvy",
  "microsandbox-core",
  "microsandbox-server",
  "microsandbox-utils",

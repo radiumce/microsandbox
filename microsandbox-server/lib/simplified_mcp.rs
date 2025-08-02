@@ -684,11 +684,14 @@ impl ConfigurationManager {
 
         let default_flavor = env::var("MSB_DEFAULT_FLAVOR")
             .ok()
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| match s.to_lowercase().as_str() {
+                "small" => Some(SandboxFlavor::Small),
+                "medium" => Some(SandboxFlavor::Medium),
+                "large" => Some(SandboxFlavor::Large),
+                _ => None,
+            })
             .unwrap_or(SandboxFlavor::Small);
-
-        let default_template = env::var("MSB_DEFAULT_TEMPLATE")
-            .unwrap_or_else(|_| "python".to_string());
+        let default_template = env::var("MSB_DEFAULT_TEMPLATE").unwrap_or_else(|_| "python".to_string());
 
         let session_timeout_seconds = env::var("MSB_SESSION_TIMEOUT_SECONDS")
             .ok()

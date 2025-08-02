@@ -17,11 +17,46 @@ use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 pub async fn main() -> MicrosandboxCliResult<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
+    // Load .env file from current working directory if it exists
+    // This allows users to configure environment variables via .env file
+    match dotenvy::dotenv() {
+        Ok(path) => {
+            println!("✓ Loaded .env file from: {}", path.display());
+            
+            // Print key environment variables for verification
+            let env_vars = [
+                "MSB_DEFAULT_FLAVOR",
+                "MSB_DEFAULT_TEMPLATE", 
+                "MSB_SHARED_VOLUME_PATH",
+                "MSB_SHARED_VOLUME_GUEST_PATH",
+            ];
+            
+            for var in env_vars {
+                if let Ok(value) = std::env::var(var) {
+                    println!("  {} = {}", var, value);
+                } else {
+                    println!("  {} = <not set>", var);
+                }
+            }
+        }
+        Err(e) => {
+            // Only log the error in debug mode, as .env file is optional
+            if std::env::var("RUST_LOG").unwrap_or_default().contains("debug") {
+                eprintln!("Note: .env file not found or could not be loaded: {}", e);
+            }
+        }
+    }
 
     // Parse command line arguments
     let args = MsbserverArgs::parse();
+
+    // Configure and initialize tracing based on the dev_mode flag
+    let log_level = if args.dev_mode {
+        tracing::Level::DEBUG
+    } else {
+        tracing::Level::INFO
+    };
+    tracing_subscriber::fmt().with_max_level(log_level).init();
 
     if args.dev_mode {
         tracing::info!("Development mode: {}", args.dev_mode);

@@ -172,11 +172,18 @@ pub async fn handle_mcp_initialize(
 ) -> ServerResult<JsonRpcResponse> {
     debug!("Handling MCP initialize request");
 
+    // Extract protocolVersion from the request, or use a default if not present.
+    let protocol_version = request.params.as_object()
+        .and_then(|params| params.get("protocolVersion"))
+        .and_then(|v| v.as_str())
+        .unwrap_or(MCP_PROTOCOL_VERSION);
+
     let result = json!({
-        "protocolVersion": MCP_PROTOCOL_VERSION,
+        "protocolVersion": protocol_version,
         "capabilities": {
-            "tools": {
-                "listChanged": false
+            "toolCalling": {
+                "callTool": {},
+                "listTools": {}
             }
         },
         "serverInfo": {
@@ -185,7 +192,10 @@ pub async fn handle_mcp_initialize(
         }
     });
 
-    Ok(JsonRpcResponse::success(result, request.id))
+    let response = JsonRpcResponse::success(result, request.id.clone());
+    debug!("MCP initialize response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+
+    Ok(response)
 }
 
 /// Handle MCP list tools request
@@ -195,113 +205,81 @@ pub async fn handle_mcp_list_tools(
 ) -> ServerResult<JsonRpcResponse> {
     debug!("Handling MCP list tools request");
 
-    let tools = json!({
-        "tools": [
-            {
-                "name": "execute_code",
-                "description": "Execute code in a sandbox with automatic session management. Creates a new session if none specified or reuses existing session. Supports Python and Node.js templates.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "Code to execute"
-                        },
-                        "template": {
-                            "type": "string",
-                            "description": "Sandbox template/image to use. If not specified, uses default from environment (currently 'python')",
-                            "enum": ["python", "node"]
-                        },
-                        "session_id": {
-                            "type": "string",
-                            "description": "Optional session ID - if not provided, a new session will be created"
-                        },
-                        "flavor": {
-                            "type": "string",
-                            "description": "Sandbox resource flavor",
-                            "enum": ["small", "medium", "large"],
-                            "default": "small"
-                        }
+    let tools = json!([
+        {
+            "name": "execute_code",
+            "description": "Execute code in a sandbox with automatic session management. Creates a new session if none specified or reuses existing session. Supports Python and Node.js templates.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "Code to execute"
                     },
-                    "required": ["code"]
-                }
-            },
-            {
-                "name": "execute_command",
-                "description": "Execute a shell command in a sandbox with automatic session management. Creates a new session if none specified or reuses existing session.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "command": {
-                            "type": "string",
-                            "description": "Command to execute"
-                        },
-                        "args": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "Optional command arguments"
-                        },
-                        "template": {
-                            "type": "string",
-                            "description": "Sandbox template/image to use. If not specified, uses default from environment (currently 'python')",
-                            "enum": ["python", "node"]
-                        },
-                        "session_id": {
-                            "type": "string",
-                            "description": "Optional session ID - if not provided, a new session will be created"
-                        },
-                        "flavor": {
-                            "type": "string",
-                            "description": "Sandbox resource flavor",
-                            "enum": ["small", "medium", "large"],
-                            "default": "small"
-                        }
+                    "template": {
+                        "type": "string",
+                        "description": "Sandbox template/image to use. If not specified, uses the server's default template.",
+                        "enum": ["python", "node"]
                     },
-                    "required": ["command"]
-                }
-            },
-            {
-                "name": "get_sessions",
-                "description": "Get information about active sandbox sessions. Can list all sessions or get details for a specific session.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "session_id": {
-                            "type": "string",
-                            "description": "Optional specific session ID to query"
-                        }
+                    "session_id": {
+                        "type": "string",
+                        "description": "Optional session ID to use. If not specified, a new session is created."
                     }
-                }
-            },
-            {
-                "name": "stop_session",
-                "description": "Stop a specific sandbox session and clean up its resources. This will terminate the session and free allocated resources.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "session_id": {
-                            "type": "string",
-                            "description": "Session ID to stop"
-                        }
-                    },
-                    "required": ["session_id"]
-                }
-            },
-            {
-                "name": "get_volume_path",
-                "description": "Get the path to the shared volume inside sandbox containers. This path can be used to access files shared between the host and sandbox.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "session_id": {
-                            "type": "string",
-                            "description": "Optional session ID - if not provided, returns default path"
-                        }
-                    }
-                }
+                },
+                "required": ["code"]
             }
-        ]
-    });
+        },
+        {
+            "name": "execute_command",
+            "description": "Execute a shell command in a sandbox. Each command runs in a new, separate session.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "Command to execute"
+                    }
+                },
+                "required": ["command"]
+            }
+        },
+        {
+            "name": "get_sessions",
+            "description": "Get a list of active sandbox sessions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "stop_session",
+            "description": "Stop a specific sandbox session.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session ID to stop"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        },
+        {
+            "name": "get_volume_path",
+            "description": "Get the host path of the shared volume.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    ]);
+
+    if let Ok(tools_str) = serde_json::to_string_pretty(&tools) {
+        debug!("MCP list_tools response payload:\n{}", tools_str);
+    }
 
     Ok(JsonRpcResponse::success(tools, request.id))
 }
@@ -843,11 +821,11 @@ pub async fn handle_mcp_method(
             let response = handle_mcp_initialize(state, request).await?;
             Ok(JsonRpcResponseOrNotification::response(response))
         }
-        "tools/list" => {
+        "listTools" => {
             let response = handle_mcp_list_tools(state, request).await?;
             Ok(JsonRpcResponseOrNotification::response(response))
         }
-        "tools/call" => {
+        "callTool" => {
             let response = handle_mcp_call_tool(state, request).await?;
             Ok(JsonRpcResponseOrNotification::response(response))
         }
