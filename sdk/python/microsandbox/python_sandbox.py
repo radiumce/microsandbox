@@ -56,6 +56,9 @@ class PythonSandbox(BaseSandbox):
             "id": str(uuid.uuid4()),
         }
 
+        print("RPC Request URL:", f"{self._server_url}/api/v1/rpc")
+        print("RPC Request Payload:", request_data)
+
         try:
             async with self._session.post(
                 f"{self._server_url}/api/v1/rpc",

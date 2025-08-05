@@ -37,6 +37,64 @@ async def main():
 asyncio.run(main())
 ```
 
+### Volume Mapping
+
+Share files between your host system and the sandbox using volume mappings:
+
+```python
+import asyncio
+from microsandbox import PythonSandbox
+
+async def main():
+    # Create sandbox with volume mappings
+    async with PythonSandbox.create(
+        volumes=["/path/on/host:/path/in/sandbox", "./local:/shared"]
+    ) as sandbox:
+        # Write a file from sandbox to host
+        await sandbox.run("""
+with open("/shared/hello.txt", "w") as f:
+    f.write("Hello from sandbox!")
+print("File written to shared volume")
+""")
+        
+        # Read a file from host in sandbox
+        execution = await sandbox.run("""
+with open("/path/in/sandbox/data.txt", "r") as f:
+    content = f.read()
+print(f"Read from host: {content}")
+""")
+        
+        print(await execution.output())
+
+asyncio.run(main())
+```
+
+### Advanced Configuration
+
+```python
+import asyncio
+from microsandbox import PythonSandbox
+
+async def main():
+    # Create sandbox with custom configuration
+    async with PythonSandbox.create(
+        name="my-custom-sandbox",
+        image="microsandbox/python:latest",  # Custom image
+        memory=1024,                         # Memory in MB
+        cpus=2.0,                           # CPU cores
+        timeout=300.0,                      # Start timeout in seconds
+        volumes=[                           # Volume mappings
+            "/home/user/data:/data",
+            "./output:/results"
+        ]
+    ) as sandbox:
+        # Your code here
+        execution = await sandbox.run("print('Custom sandbox ready!')")
+        print(await execution.output())
+
+asyncio.run(main())
+```
+
 ### Executing Shell Commands
 
 ```python
@@ -87,6 +145,23 @@ Check out the [examples directory](./examples) for sample scripts that demonstra
 - Run code in sandbox environments
 - Execute shell commands in the sandbox
 - Handle execution output and error handling
+- Use volume mappings for file sharing
+- Work with multiple volume mappings
+
+### Volume Mapping Examples
+
+Volume mappings allow you to share files between your host filesystem and the sandbox. The format is `"host_path:container_path"`.
+
+**Supported formats:**
+- Absolute paths: `"/home/user/data:/data"`
+- Relative paths: `"./local:/shared"` (relative to current directory)
+- Multiple mappings: `["/data:/data", "/config:/config", "./output:/results"]`
+
+**Example use cases:**
+- Share configuration files with the sandbox
+- Process data files from your host system
+- Save sandbox output to your local filesystem
+- Create persistent storage for sandbox sessions
 
 ## License
 

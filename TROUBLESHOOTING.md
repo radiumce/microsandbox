@@ -1,4 +1,4 @@
-# Troubleshooting Guide
+# Troubleshooting Guide(this guide is staled, should only used as a reference to old mcp implement)
 
 This guide helps resolve common issues with the microsandbox MCP server and its simplified interface.
 

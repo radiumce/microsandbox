@@ -400,6 +400,100 @@ This document provides comprehensive examples of using the microsandbox MCP serv
 }
 ```
 
+## Python SDK Volume Mapping
+
+### Basic Volume Usage
+
+```python
+import asyncio
+from microsandbox import PythonSandbox
+
+async def volume_example():
+    # Create sandbox with volume mapping
+    async with PythonSandbox.create(
+        name="volume-demo",
+        volumes=["/tmp/shared:/shared"],  # host_path:container_path
+        memory=512,
+        cpus=1.0
+    ) as sandbox:
+        # Write file from sandbox to host
+        code = """
+with open("/shared/output.txt", "w") as f:
+    f.write("Hello from Python sandbox!")
+print("File written to shared volume")
+"""
+        
+        execution = await sandbox.run(code)
+        print(execution.stdout)
+
+asyncio.run(volume_example())
+```
+
+### Multiple Volume Mappings
+
+```python
+async def multi_volume_example():
+    volumes = [
+        "/home/user/data:/data",      # Data directory
+        "/home/user/config:/config",  # Configuration files
+        "./output:/results"           # Relative path for results
+    ]
+    
+    async with PythonSandbox.create(
+        name="multi-volume-demo",
+        volumes=volumes,
+        memory=1024,
+        cpus=2.0
+    ) as sandbox:
+        code = """
+import os
+import json
+
+# Read config file from host
+with open("/config/settings.json", "r") as f:
+    settings = json.load(f)
+
+# Process data from host data directory
+data_files = os.listdir("/data")
+print(f"Found {len(data_files)} data files")
+
+# Write results to output directory
+results = {"processed_files": len(data_files), "settings": settings}
+with open("/results/analysis.json", "w") as f:
+    json.dump(results, f, indent=2)
+
+print("Analysis complete, results saved to /results/analysis.json")
+"""
+        
+        execution = await sandbox.run(code)
+        print(execution.stdout)
+```
+
+### Volume Mapping with Manual Start
+
+```python
+async def manual_start_with_volumes():
+    sandbox = PythonSandbox(name="manual-volume-demo")
+    sandbox._session = aiohttp.ClientSession()
+    
+    try:
+        # Start with volume mapping
+        await sandbox.start(
+            image="microsandbox/python",
+            memory=512,
+            cpus=1.0,
+            volumes=["./shared:/shared", "/tmp/cache:/cache"]
+        )
+        
+        # Use the sandbox
+        execution = await sandbox.run("print('Sandbox with volumes started!')")
+        print(execution.stdout)
+        
+    finally:
+        await sandbox.stop()
+        await sandbox._session.close()
+```
+
 ## Integration Examples
 
 ### MCP Client Configuration

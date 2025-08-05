@@ -75,6 +75,11 @@ class BaseSandbox(ABC):
         namespace: str = "default",
         name: Optional[str] = None,
         api_key: Optional[str] = None,
+        image: Optional[str] = None,
+        memory: int = 512,
+        cpus: float = 1.0,
+        timeout: float = 180.0,
+        volumes: Optional[list] = None,
     ):
         """
         Create and initialize a new sandbox as an async context manager.
@@ -84,6 +89,12 @@ class BaseSandbox(ABC):
             namespace: Namespace for the sandbox
             name: Optional name for the sandbox. If not provided, a random name will be generated.
             api_key: API key for Microsandbox server authentication. If not provided, it will be read from MSB_API_KEY environment variable.
+            image: Docker image to use for the sandbox (defaults to language-specific image)
+            memory: Memory limit in MB
+            cpus: CPU limit (will be rounded to nearest integer)
+            timeout: Maximum time in seconds to wait for the sandbox to start (default: 180 seconds)
+            volumes: List of volume mappings in format ["host_path:container_path", ...]. 
+                    Supports both relative paths (relative to project directory) and absolute paths.
 
         Returns:
             An instance of the sandbox ready for use
@@ -106,7 +117,13 @@ class BaseSandbox(ABC):
             # Create HTTP session
             sandbox._session = aiohttp.ClientSession()
             # Start the sandbox
-            await sandbox.start()
+            await sandbox.start(
+                image=image,
+                memory=memory,
+                cpus=cpus,
+                timeout=timeout,
+                volumes=volumes,
+            )
             yield sandbox
         finally:
             # Stop the sandbox
@@ -122,6 +139,7 @@ class BaseSandbox(ABC):
         memory: int = 512,
         cpus: float = 1.0,
         timeout: float = 180.0,
+        volumes: Optional[list] = None,
     ) -> None:
         """
         Start the sandbox container.
@@ -131,6 +149,8 @@ class BaseSandbox(ABC):
             memory: Memory limit in MB
             cpus: CPU limit (will be rounded to nearest integer)
             timeout: Maximum time in seconds to wait for the sandbox to start (default: 180 seconds)
+            volumes: List of volume mappings in format ["host_path:container_path", ...]. 
+                    Supports both relative paths (relative to project directory) and absolute paths.
 
         Raises:
             RuntimeError: If the sandbox fails to start
@@ -140,17 +160,25 @@ class BaseSandbox(ABC):
             return
 
         sandbox_image = image or await self.get_default_image()
+        
+        # Build the config object
+        config = {
+            "image": sandbox_image,
+            "memory": memory,
+            "cpus": int(round(cpus)),
+        }
+        
+        # Add volumes if provided
+        if volumes:
+            config["volumes"] = volumes
+        
         request_data = {
             "jsonrpc": "2.0",
             "method": "sandbox.start",
             "params": {
                 "namespace": self._namespace,
                 "sandbox": self._name,
-                "config": {
-                    "image": sandbox_image,
-                    "memory": memory,
-                    "cpus": int(round(cpus)),
-                },
+                "config": config,
             },
             "id": str(uuid.uuid4()),
         }
