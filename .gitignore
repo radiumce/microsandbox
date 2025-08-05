@@ -19,3 +19,4 @@ libkrunfw.*
 libkrun.*
 .menv/
 Sandboxfile*
+tmp-build/portal
