@@ -131,9 +131,11 @@ class WrapperConfig:
         """
         Parse shared volume mappings from environment variable.
         
-        Supports both JSON array format and comma-separated format:
-        - JSON: ["host1:container1", "host2:container2"]
+        Supports multiple formats:
+        - JSON array: ["host1:container1", "host2:container2"]
         - Comma-separated: "host1:container1,host2:container2"
+        - Single mapping: "host1:container1"
+        - Empty/disabled: empty string or None
         
         Returns:
             List[str]: List of volume mapping strings
@@ -149,56 +151,151 @@ class WrapperConfig:
         if not volume_path_env:
             return []
         
+        logger.debug(f"Parsing MSB_SHARED_VOLUME_PATH: {repr(volume_path_env)}")
+        
         try:
-            # Try to parse as JSON array first
-            if volume_path_env.startswith('[') and volume_path_env.endswith(']'):
-                parsed_mappings = json.loads(volume_path_env)
+            # Check if it looks like JSON (array or object)
+            if volume_path_env.startswith('[') or volume_path_env.startswith('{'):
+                # For JSON objects, provide helpful error message
+                if volume_path_env.startswith('{'):
+                    raise ConfigurationError(
+                        f"MSB_SHARED_VOLUME_PATH must be an array of strings, not a JSON object. "
+                        f"Got: {repr(volume_path_env)}\n"
+                        f"Example: ['./data:/workspace', './shared:/sandbox/shared']"
+                    )
+                
+                # Handle JSON arrays
+                if not volume_path_env.endswith(']'):
+                    raise ConfigurationError(
+                        f"MSB_SHARED_VOLUME_PATH appears to be JSON array but is malformed: "
+                        f"missing closing bracket. Got: {repr(volume_path_env)}"
+                    )
+                
+                # Additional validation for common JSON errors
+                if volume_path_env.count('[') != volume_path_env.count(']'):
+                    raise ConfigurationError(
+                        f"MSB_SHARED_VOLUME_PATH has mismatched brackets. Got: {repr(volume_path_env)}"
+                    )
+                
+                try:
+                    parsed_mappings = json.loads(volume_path_env)
+                except json.JSONDecodeError as e:
+                    # Provide more helpful error messages for common JSON mistakes
+                    error_msg = str(e)
+                    helpful_msg = cls._get_helpful_json_error_message(volume_path_env, error_msg)
+                    raise ConfigurationError(
+                        f"Invalid JSON format in MSB_SHARED_VOLUME_PATH: {error_msg}\n{helpful_msg}"
+                    )
+                
                 if not isinstance(parsed_mappings, list):
                     raise ConfigurationError(
-                        "MSB_SHARED_VOLUME_PATH JSON must be an array of strings"
+                        f"MSB_SHARED_VOLUME_PATH JSON must be an array of strings, got {type(parsed_mappings).__name__}. "
+                        f"Example: ['./data:/workspace', './shared:/sandbox/shared']"
                     )
                 
                 # Validate that all items are strings
                 for i, mapping in enumerate(parsed_mappings):
                     if not isinstance(mapping, str):
                         raise ConfigurationError(
-                            f"MSB_SHARED_VOLUME_PATH item {i} must be a string, got {type(mapping).__name__}"
+                            f"MSB_SHARED_VOLUME_PATH item {i} must be a string, got {type(mapping).__name__}. "
+                            f"All volume mappings must be strings like 'host_path:container_path'"
                         )
                 
                 # Validate volume mapping format
-                validated_mappings = []
-                for mapping in parsed_mappings:
-                    mapping = mapping.strip()
-                    if mapping:
-                        # Validate format by attempting to parse
-                        try:
-                            VolumeMapping.from_string(mapping)
-                            validated_mappings.append(mapping)
-                        except ValueError as e:
-                            raise ConfigurationError(f"Invalid volume mapping in MSB_SHARED_VOLUME_PATH: {e}")
-                
+                validated_mappings = cls._validate_volume_mappings(parsed_mappings)
+                logger.debug(f"Successfully parsed JSON volume mappings: {validated_mappings}")
                 return validated_mappings
             
             else:
-                # Parse as comma-separated values
-                mappings = [mapping.strip() for mapping in volume_path_env.split(',')]
-                validated_mappings = []
+                # Parse as comma-separated values or single value
+                if ',' in volume_path_env:
+                    mappings = [mapping.strip() for mapping in volume_path_env.split(',')]
+                    logger.debug(f"Parsing as comma-separated: {mappings}")
+                else:
+                    mappings = [volume_path_env.strip()]
+                    logger.debug(f"Parsing as single mapping: {mappings}")
                 
-                for mapping in mappings:
-                    if mapping:
-                        # Validate format by attempting to parse
-                        try:
-                            VolumeMapping.from_string(mapping)
-                            validated_mappings.append(mapping)
-                        except ValueError as e:
-                            raise ConfigurationError(f"Invalid volume mapping in MSB_SHARED_VOLUME_PATH: {e}")
-                
+                validated_mappings = cls._validate_volume_mappings(mappings)
+                logger.debug(f"Successfully parsed volume mappings: {validated_mappings}")
                 return validated_mappings
                 
-        except json.JSONDecodeError as e:
+        except ConfigurationError:
+            # Re-raise ConfigurationError as-is
+            raise
+        except Exception as e:
+            # Wrap unexpected errors
             raise ConfigurationError(
-                f"Invalid JSON format in MSB_SHARED_VOLUME_PATH: {e}"
+                f"Unexpected error parsing MSB_SHARED_VOLUME_PATH '{volume_path_env}': {str(e)}"
             )
+    
+    @classmethod
+    def _validate_volume_mappings(cls, mappings: List[str]) -> List[str]:
+        """
+        Validate volume mapping format and return cleaned mappings.
+        
+        Args:
+            mappings: List of volume mapping strings to validate
+            
+        Returns:
+            List[str]: List of validated volume mapping strings
+            
+        Raises:
+            ConfigurationError: If any mapping is invalid
+        """
+        validated_mappings = []
+        
+        for i, mapping in enumerate(mappings):
+            mapping = mapping.strip()
+            if not mapping:
+                continue  # Skip empty mappings
+            
+            # Validate format by attempting to parse
+            try:
+                VolumeMapping.from_string(mapping)
+                validated_mappings.append(mapping)
+            except ValueError as e:
+                raise ConfigurationError(
+                    f"Invalid volume mapping at position {i} in MSB_SHARED_VOLUME_PATH: {e}\n"
+                    f"Got: '{mapping}'\n"
+                    f"Expected format: 'host_path:container_path' (e.g., './data:/workspace')"
+                )
+        
+        return validated_mappings
+    
+    @classmethod
+    def _get_helpful_json_error_message(cls, value: str, error_msg: str) -> str:
+        """
+        Generate helpful error message for common JSON parsing errors.
+        
+        Args:
+            value: The original value that failed to parse
+            error_msg: The original JSON error message
+            
+        Returns:
+            str: Helpful error message with suggestions
+        """
+        suggestions = []
+        
+        # Check for common issues
+        if 'Expecting value' in error_msg and value.count('"') == 0:
+            suggestions.append("- Strings in JSON arrays must be quoted with double quotes")
+            suggestions.append("  Example: ['/path/to/host:/path/in/container'] should be [\"/path/to/host:/path/in/container\"]")
+        
+        if 'Expecting \',' in error_msg:
+            suggestions.append("- Check that the JSON array is properly closed with ']'")
+            suggestions.append("- Multiple items in JSON arrays must be separated by commas")
+        
+        if value.count('"') % 2 != 0:
+            suggestions.append("- Check that all quotes are properly paired")
+        
+        if not suggestions:
+            suggestions = [
+                "- Ensure the value is valid JSON array format: [\"item1\", \"item2\"]",
+                "- Or use comma-separated format: item1,item2",
+                "- Or use single value format: item1"
+            ]
+        
+        return "Helpful suggestions:\n" + "\n".join(suggestions)
     
     @classmethod
     def _parse_default_flavor(cls) -> SandboxFlavor:

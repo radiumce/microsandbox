@@ -6,12 +6,14 @@ This module provides the main entry point using the official MCP Python SDK.
 
 import argparse
 import asyncio
+import atexit
 import logging
 import os
+import signal
 import sys
 
 from microsandbox_wrapper import setup_logging, get_logger, ConfigurationError
-from mcp_server.server_sdk import create_server_app
+from mcp_server.server_sdk import create_server_app, shutdown_wrapper
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,6 +91,20 @@ def get_server_config(args: argparse.Namespace) -> dict:
     return config
 
 
+def setup_cleanup_handlers():
+    """Setup cleanup handlers for graceful shutdown."""
+    def signal_handler(signum, frame):
+        """Signal handler for graceful shutdown."""
+        print(f"Received signal {signum}, shutting down...", file=sys.stderr)
+        # For now, rely on the MCP SDK's own cleanup mechanisms
+        # The global wrapper will be cleaned up when the process exits
+        sys.exit(0)
+    
+    # Register signal handlers only - let process exit handle cleanup
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+
 def main():
     """Main entry point."""
     # Parse command line arguments
@@ -98,6 +114,9 @@ def main():
     # The logging is already configured to use stderr in the wrapper setup
     setup_logging(level=args.log_level)
     logger = get_logger(__name__)
+    
+    # Setup cleanup handlers for graceful shutdown
+    setup_cleanup_handlers()
 
     try:
         # Only log startup for non-stdio transports to avoid interfering with MCP protocol

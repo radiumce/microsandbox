@@ -59,10 +59,10 @@ load_env_file ".env.local"    # Local overrides
 
 # MCP Server Configuration
 export MCP_SERVER_HOST="localhost"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8001"
 export MCP_ENABLE_CORS="true"
 
-# Microsandbox Connection
+# Microsandbox Connection - Use simple configuration like working manual command
 export MSB_SERVER_URL="http://127.0.0.1:5555"
 
 # Session Management - Development friendly
@@ -74,10 +74,6 @@ export MSB_SESSION_CLEANUP_INTERVAL="60"   # 1 minute
 # Resource Limits - Conservative for development
 export MSB_MAX_TOTAL_MEMORY_MB="4096"      # 4GB
 export MSB_MAX_EXECUTION_TIME="300"        # 5 minutes
-
-# Volume Mapping - Development shared directory
-export MSB_ENABLE_VOLUME_MAPPING="true"
-export MSB_SHARED_VOLUME_PATH='["./tmp/mcp-dev:/sandbox/shared", "./data:/workspace"]'
 
 # Logging - Verbose for development
 export MSB_LOG_LEVEL="DEBUG"
@@ -113,8 +109,6 @@ EOF
 fi
 
 log_info "Development environment setup complete"
-log_info "Shared directory: $(pwd)/tmp/mcp-dev -> /sandbox/shared"
-log_info "Data directory: $(pwd)/data -> /workspace"
 
 # =============================================================================
 # PRE-FLIGHT CHECKS
@@ -182,11 +176,10 @@ echo "  Server: http://${MCP_SERVER_HOST}:${MCP_SERVER_PORT}"
 echo "  CORS: ${MCP_ENABLE_CORS}"
 echo "  Max Sessions: ${MSB_MAX_SESSIONS}"
 echo "  Log Level: ${MSB_LOG_LEVEL}"
-echo "  Shared Volume: ./tmp/mcp-dev -> /sandbox/shared"
 
 log_info "Starting MCP Server..."
 log_info "Press Ctrl+C to stop"
 
 # Change to script directory and start server
 cd "$SCRIPT_DIR"
-exec $PYTHON_CMD -m mcp_server.main_sdk --transport streamable-http
+exec $PYTHON_CMD -m mcp_server.main_sdk --transport streamable-http --port ${MCP_SERVER_PORT}

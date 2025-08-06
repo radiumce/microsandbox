@@ -38,22 +38,51 @@ class AppContext:
     wrapper: MicrosandboxWrapper
 
 
+# Global wrapper instance - shared across all sessions
+_global_wrapper: Optional[MicrosandboxWrapper] = None
+_wrapper_lock = asyncio.Lock()
+
+
+async def get_or_create_wrapper() -> MicrosandboxWrapper:
+    """Get or create the global wrapper instance."""
+    global _global_wrapper
+    
+    async with _wrapper_lock:
+        if _global_wrapper is None:
+            logger.info("Creating global MicrosandboxWrapper instance")
+            _global_wrapper = MicrosandboxWrapper()
+            await _global_wrapper.start()
+            logger.info("Global MicrosandboxWrapper started successfully")
+        
+        return _global_wrapper
+
+
+async def shutdown_wrapper() -> None:
+    """Shutdown the global wrapper instance."""
+    global _global_wrapper
+    
+    async with _wrapper_lock:
+        if _global_wrapper is not None:
+            logger.info("Shutting down global MicrosandboxWrapper")
+            await _global_wrapper.stop()
+            logger.info("Global MicrosandboxWrapper shutdown complete")
+            _global_wrapper = None
+
+
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Manage application lifecycle with MicrosandboxWrapper."""
+    """Manage application lifecycle with persistent MicrosandboxWrapper."""
     logger.info("Starting MCP Server with official SDK")
     
-    # Initialize and start wrapper
-    wrapper = MicrosandboxWrapper()
+    # Get or create the global wrapper (will be created only once)
+    wrapper = await get_or_create_wrapper()
+    
     try:
-        await wrapper.start()
-        logger.info("MicrosandboxWrapper started successfully")
         yield AppContext(wrapper=wrapper)
     finally:
-        # Cleanup on shutdown
-        logger.info("Shutting down MicrosandboxWrapper")
-        await wrapper.stop()
-        logger.info("MCP Server shutdown complete")
+        # Don't shutdown wrapper here - it should persist across sessions
+        # The wrapper will be shut down when the server process terminates
+        logger.info("MCP Server session complete")
 
 
 # Create MCP server with lifespan management
