@@ -14,9 +14,6 @@ pytest>=7.0.0
 pytest-asyncio>=0.21.0
 pytest-mock>=3.10.0
 
-# MCP SDK for integration testing
-mcp>=1.0.0
-
 # Development dependencies (optional)
 black>=22.0.0
 flake8>=5.0.0

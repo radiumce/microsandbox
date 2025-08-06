@@ -76,14 +76,18 @@ class MCPServerApp:
             await self.wrapper.start()
             self.logger.info("MicrosandboxWrapper started successfully")
             
-            # 2. Initialize MCP server (will be implemented in task 3)
-            # For now, we'll create a placeholder that shows the server would start
-            self.logger.info("MCP Server would start here (to be implemented in task 3)")
-            self.logger.info(f"Server would listen on {self.config.host}:{self.config.port}")
+            # 2. Initialize and start MCP server
+            from .server import MCPServer
+            self.server = MCPServer(
+                wrapper=self.wrapper,
+                host=self.config.host,
+                port=self.config.port,
+                enable_cors=self.config.enable_cors
+            )
             
-            # 3. Wait for shutdown signal
-            self.logger.info("MCP Server startup complete, waiting for shutdown signal...")
-            await self.shutdown_event.wait()
+            # 3. Start the MCP server
+            self.logger.info(f"Starting MCP HTTP server on {self.config.host}:{self.config.port}")
+            await self.server.start()
             
         except Exception as e:
             self.logger.error(f"Failed to start MCP Server: {e}")
@@ -95,19 +99,19 @@ class MCPServerApp:
         self.logger.info("Initiating graceful shutdown...")
         
         try:
-            # 1. Stop accepting new requests (will be implemented in task 3)
-            self.logger.info("Stopping new request acceptance...")
+            # 1. Stop MCP HTTP server
+            if self.server:
+                self.logger.info("Shutting down MCP HTTP server...")
+                await self.server.stop()
+                self.logger.info("MCP HTTP server shutdown complete")
             
-            # 2. Wait for existing requests to complete (will be implemented in task 3)
-            self.logger.info("Waiting for existing requests to complete...")
-            
-            # 3. Shutdown wrapper
+            # 2. Shutdown wrapper
             if self.wrapper:
                 self.logger.info("Shutting down MicrosandboxWrapper...")
                 await self.wrapper.stop()
                 self.logger.info("MicrosandboxWrapper shutdown complete")
             
-            # 4. Signal shutdown complete
+            # 3. Signal shutdown complete
             self.shutdown_event.set()
             self.logger.info("Graceful shutdown complete")
             
@@ -118,6 +122,12 @@ class MCPServerApp:
     async def cleanup(self) -> None:
         """Emergency cleanup in case of startup failure"""
         self.logger.info("Performing emergency cleanup...")
+        
+        if self.server:
+            try:
+                await self.server.stop()
+            except Exception as e:
+                self.logger.error(f"Error during server cleanup: {e}")
         
         if self.wrapper:
             try:
@@ -212,7 +222,7 @@ async def main() -> None:
     args = parse_args()
     
     # Setup logging
-    setup_logging(level=getattr(logging, args.log_level))
+    setup_logging(level=args.log_level)
     logger = get_logger(__name__)
     
     try:
