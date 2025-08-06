@@ -1,21 +1,23 @@
-# MicrosandboxWrapper
+# HTTP Streamable MCP Server for Microsandbox
 
-A high-level Python wrapper for the Microsandbox service, designed to simplify sandbox operations for MCP (Model Context Protocol) servers and other applications.
+A Model Context Protocol (MCP) server that provides HTTP streamable transport for the Microsandbox service. This server acts as a lightweight protocol adapter, converting MCP protocol messages to Microsandbox wrapper calls while maintaining full compatibility with MCP clients.
 
 ## Overview
 
-The MicrosandboxWrapper provides a clean, async-first interface for executing code and commands in isolated sandbox environments. It handles session management, resource allocation, error handling, and cleanup automatically, allowing you to focus on your application logic.
+The HTTP Streamable MCP Server provides a standard MCP interface for executing code and commands in isolated sandbox environments. It implements the MCP HTTP streamable transport protocol and integrates seamlessly with the existing MicrosandboxWrapper for session management, resource allocation, and error handling.
 
 ### Key Features
 
-- **🚀 Simple API**: Execute code with a single async call
-- **🔄 Automatic Session Management**: Sessions are created, reused, and cleaned up automatically
-- **📊 Resource Management**: Built-in resource limits, monitoring, and orphan cleanup
+- **🌐 MCP Protocol Compliance**: Full support for MCP HTTP streamable transport
+- **🔧 Standard MCP Tools**: Execute code, run commands, manage sessions via MCP protocol
+- **🚀 Lightweight Design**: Thin protocol layer that leverages existing wrapper functionality
+- **🔄 Session Management**: Automatic session creation, reuse, and cleanup through MCP interface
+- **📊 Resource Management**: Built-in resource limits and monitoring accessible via MCP tools
 - **🔧 Multiple Templates**: Support for Python, Node.js, and other sandbox environments
-- **📁 Volume Mapping**: Share files between host and sandbox environments
-- **⚡ Concurrent Execution**: Run multiple operations in parallel
-- **🛡️ Error Handling**: Comprehensive error handling with detailed error information
-- **🧹 Background Cleanup**: Automatic cleanup of expired sessions and orphaned resources
+- **📁 Volume Mapping**: Access to configured volume mappings through MCP tools
+- **⚡ Concurrent Execution**: Handle multiple MCP requests in parallel
+- **🛡️ Error Handling**: MCP-compliant error responses with detailed error information
+- **🌍 CORS Support**: Optional CORS support for web-based MCP clients
 
 ## Quick Start
 
@@ -32,39 +34,82 @@ pip install -r requirements.txt
 ### Start the Microsandbox Server
 
 ```bash
-# Start the server (from project root)
+# Start the microsandbox server (from project root)
 ./start_msbserver_debug.sh
+
+# Verify server is running
+curl -s http://127.0.0.1:5555/api/v1/health
 ```
 
-### Basic Usage
+### Start the MCP Server
+
+```bash
+# Start the MCP server with default settings
+python -m mcp_server.main
+
+# Or with custom configuration
+MCP_SERVER_HOST=0.0.0.0 MCP_SERVER_PORT=9000 MCP_ENABLE_CORS=true python -m mcp_server.main
+```
+
+### Using with MCP Clients
+
+The server provides standard MCP tools that can be used with any MCP-compatible client:
+
+#### Available Tools
+
+- **execute_code**: Execute code in a sandbox
+- **execute_command**: Execute commands in a sandbox  
+- **get_sessions**: Get information about active sessions
+- **stop_session**: Stop a specific session
+- **get_volume_path**: Get configured volume mappings
+
+#### Example MCP Client Usage
 
 ```python
 import asyncio
-from microsandbox_wrapper import MicrosandboxWrapper, SandboxFlavor
+import aiohttp
+import json
 
-async def main():
-    async with MicrosandboxWrapper() as wrapper:
-        # Execute Python code
-        result = await wrapper.execute_code(
-            code="print('Hello, World!')",
-            template="python",
-            flavor=SandboxFlavor.SMALL
-        )
-        
-        print(f"Output: {result.stdout}")
-        print(f"Success: {result.success}")
-        print(f"Execution time: {result.execution_time_ms}ms")
+async def call_mcp_tool():
+    """Example of calling MCP tools via HTTP"""
+    
+    # MCP JSON-RPC request to execute Python code
+    request = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "execute_code",
+            "arguments": {
+                "code": "print('Hello from MCP!')",
+                "template": "python",
+                "flavor": "small"
+            }
+        }
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            "http://localhost:8000/mcp",
+            json=request,
+            headers={"Content-Type": "application/json"}
+        ) as response:
+            result = await response.json()
+            print(f"Result: {result}")
 
-asyncio.run(main())
+asyncio.run(call_mcp_tool())
 ```
 
 ## Documentation
 
 ### 📚 Complete Documentation
 
+- **[Environment Configuration](ENVIRONMENT_CONFIG.md)** - Comprehensive environment variable configuration guide
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production deployment instructions for various environments
+- **[MCP Troubleshooting Guide](MCP_TROUBLESHOOTING_GUIDE.md)** - MCP-specific troubleshooting and solutions
 - **[API Documentation](API_DOCUMENTATION.md)** - Complete API reference with all classes, methods, and data models
-- **[Configuration Guide](CONFIGURATION_GUIDE.md)** - Comprehensive configuration options and environment setup
-- **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** - Common issues, diagnostics, and solutions
+- **[Configuration Guide](CONFIGURATION_GUIDE.md)** - Wrapper configuration options and environment setup
+- **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** - General wrapper troubleshooting and solutions
 
 ### 📖 Examples and Guides
 
@@ -81,193 +126,359 @@ asyncio.run(main())
 
 ## Core Concepts
 
+### MCP Tools
+
+The server provides standard MCP tools for sandbox operations:
+
+#### execute_code Tool
+Execute code in a sandbox with automatic session management:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "code": "print('Hello, World!')",
+      "template": "python",
+      "flavor": "small",
+      "session_id": "optional-session-id",
+      "timeout": 30
+    }
+  }
+}
+```
+
+#### execute_command Tool
+Execute commands in a sandbox:
+
+```json
+{
+  "jsonrpc": "2.0", 
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_command",
+    "arguments": {
+      "command": "ls",
+      "args": ["-la"],
+      "template": "python",
+      "session_id": "optional-session-id"
+    }
+  }
+}
+```
+
 ### Sessions
 
-Sessions represent persistent sandbox environments that can be reused across multiple operations:
+Sessions represent persistent sandbox environments that can be reused across multiple MCP tool calls. Session IDs are returned in tool responses and can be used in subsequent calls:
 
-```python
-async with MicrosandboxWrapper() as wrapper:
-    # First execution creates a session
-    result1 = await wrapper.execute_code("x = 42", template="python")
-    session_id = result1.session_id
-    
-    # Reuse the session to access previous state
-    result2 = await wrapper.execute_code(
-        "print(f'x = {x}')", 
-        template="python",
-        session_id=session_id
-    )
+```json
+// First call creates a session
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [{"type": "text", "text": "42"}],
+    "session_id": "session-123",
+    "session_created": true
+  }
+}
+
+// Reuse session in next call
+{
+  "name": "execute_code",
+  "arguments": {
+    "code": "print(x)",
+    "session_id": "session-123"
+  }
+}
 ```
 
 ### Resource Flavors
 
 Choose appropriate resource configurations for your workloads:
 
-- **SMALL**: 1 CPU, 1GB RAM - Light workloads, quick scripts
-- **MEDIUM**: 2 CPU, 2GB RAM - Moderate processing, data analysis
-- **LARGE**: 4 CPU, 4GB RAM - Heavy computation, complex operations
+- **small**: 1 CPU, 1GB RAM - Light workloads, quick scripts
+- **medium**: 2 CPU, 2GB RAM - Moderate processing, data analysis  
+- **large**: 4 CPU, 4GB RAM - Heavy computation, complex operations
 
-```python
-# Use appropriate flavor for your workload
-result = await wrapper.execute_code(
-    code="# Heavy computation here",
-    flavor=SandboxFlavor.LARGE
-)
-```
+### Volume Mappings
 
-### Volume Mapping
+Access configured volume mappings through the `get_volume_path` tool:
 
-Share files between your host system and sandbox environments:
-
-```python
-from microsandbox_wrapper import WrapperConfig
-
-config = WrapperConfig.from_env()
-config.shared_volume_mappings = [
-    "/host/data:/sandbox/input",
-    "/host/results:/sandbox/output"
-]
-
-async with MicrosandboxWrapper(config=config) as wrapper:
-    result = await wrapper.execute_code("""
-        with open('/sandbox/input/data.txt', 'r') as f:
-            data = f.read()
-        
-        processed = data.upper()
-        
-        with open('/sandbox/output/result.txt', 'w') as f:
-            f.write(processed)
-    """)
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call", 
+  "params": {
+    "name": "get_volume_path",
+    "arguments": {}
+  }
+}
 ```
 
 ## Configuration
 
-### Environment Variables
+### MCP Server Environment Variables
 
-Configure the wrapper using environment variables:
+Configure the MCP server using environment variables:
 
 ```bash
-# Server configuration
-export MSB_SERVER_URL="http://127.0.0.1:5555"
-export MSB_API_KEY="your-api-key"
+# MCP Server Configuration
+export MCP_SERVER_HOST="localhost"        # Server host address (default: localhost)
+export MCP_SERVER_PORT="8000"            # Server port number (default: 8000)
+export MCP_ENABLE_CORS="false"           # Enable CORS support (default: false)
 
-# Session configuration
-export MSB_SESSION_TIMEOUT="1800"  # 30 minutes
-export MSB_MAX_SESSIONS="10"
-export MSB_DEFAULT_FLAVOR="small"
-
-# Volume mappings (JSON array format)
-export MSB_SHARED_VOLUME_PATH='["/host/data:/sandbox/data"]'
-
-# Resource limits
-export MSB_MAX_TOTAL_MEMORY_MB="8192"  # 8GB total
+# Microsandbox Wrapper Configuration (inherited)
+export MSB_SERVER_URL="http://127.0.0.1:5555"  # Microsandbox server URL
+export MSB_API_KEY="your-api-key"              # Optional API key
+export MSB_SESSION_TIMEOUT="1800"              # Session timeout in seconds
+export MSB_MAX_SESSIONS="10"                   # Maximum concurrent sessions
+export MSB_DEFAULT_FLAVOR="small"              # Default resource flavor
+export MSB_SHARED_VOLUME_PATH='["/host/data:/sandbox/data"]'  # Volume mappings
 ```
 
-### Programmatic Configuration
+### Command Line Options
 
-```python
-from microsandbox_wrapper import WrapperConfig, SandboxFlavor
+```bash
+# Start server with command line options
+python -m mcp_server.main --host 0.0.0.0 --port 9000 --enable-cors --log-level DEBUG
 
-config = WrapperConfig(
-    server_url="http://localhost:5555",
-    max_concurrent_sessions=20,
-    session_timeout=3600,  # 1 hour
-    default_flavor=SandboxFlavor.MEDIUM,
-    shared_volume_mappings=[
-        "/data/input:/sandbox/input",
-        "/data/output:/sandbox/output"
-    ]
-)
+# Available options:
+#   --host HOST           Server host address
+#   --port PORT           Server port number  
+#   --enable-cors         Enable CORS support
+#   --log-level LEVEL     Set logging level (DEBUG, INFO, WARNING, ERROR)
+```
 
-async with MicrosandboxWrapper(config=config) as wrapper:
-    # Use wrapper with custom configuration
-    pass
+### Configuration Examples
+
+#### Development Setup
+```bash
+# Development with CORS enabled for web clients
+export MCP_SERVER_HOST="localhost"
+export MCP_SERVER_PORT="8000"
+export MCP_ENABLE_CORS="true"
+python -m mcp_server.main
+```
+
+#### Production Setup
+```bash
+# Production setup with external access
+export MCP_SERVER_HOST="0.0.0.0"
+export MCP_SERVER_PORT="8080"
+export MCP_ENABLE_CORS="false"
+export MSB_MAX_SESSIONS="50"
+export MSB_SESSION_TIMEOUT="3600"
+python -m mcp_server.main --log-level WARNING
+```
+
+#### Docker Deployment
+```bash
+# Docker environment variables
+docker run -d \
+  -e MCP_SERVER_HOST=0.0.0.0 \
+  -e MCP_SERVER_PORT=8000 \
+  -e MCP_ENABLE_CORS=true \
+  -e MSB_SERVER_URL=http://microsandbox:5555 \
+  -p 8000:8000 \
+  mcp-server
 ```
 
 ## Advanced Features
 
-### Concurrent Execution
+### Session Management
 
-Execute multiple operations in parallel:
+List and manage active sessions through MCP tools:
 
-```python
-import asyncio
+```json
+// List all active sessions
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "get_sessions",
+    "arguments": {}
+  }
+}
 
-async with MicrosandboxWrapper() as wrapper:
-    tasks = [
-        wrapper.execute_code("print('Task 1')", template="python"),
-        wrapper.execute_code("console.log('Task 2')", template="node"),
-        wrapper.execute_code("print('Task 3')", template="python"),
-    ]
-    
-    results = await asyncio.gather(*tasks)
-    for i, result in enumerate(results):
-        print(f"Task {i+1}: {result.stdout.strip()}")
+// Get specific session info
+{
+  "jsonrpc": "2.0", 
+  "id": 5,
+  "method": "tools/call",
+  "params": {
+    "name": "get_sessions",
+    "arguments": {
+      "session_id": "session-123"
+    }
+  }
+}
+
+// Stop a session
+{
+  "jsonrpc": "2.0",
+  "id": 6, 
+  "method": "tools/call",
+  "params": {
+    "name": "stop_session",
+    "arguments": {
+      "session_id": "session-123"
+    }
+  }
+}
 ```
 
-### Resource Monitoring
+### Error Handling
 
-Monitor resource usage and session status:
+The server provides MCP-compliant error responses with detailed information:
 
-```python
-async with MicrosandboxWrapper() as wrapper:
-    # Get resource statistics
-    stats = await wrapper.get_resource_stats()
-    print(f"Active sessions: {stats.active_sessions}/{stats.max_sessions}")
-    print(f"Memory usage: {stats.total_memory_mb} MB")
-    
-    # List active sessions
-    sessions = await wrapper.get_sessions()
-    for session in sessions:
-        print(f"Session {session.session_id}: {session.template} ({session.flavor.value})")
+```json
+// Example error response
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32603,
+    "message": "Resource limit exceeded: Maximum memory usage reached",
+    "data": {
+      "error_code": "RESOURCE_LIMIT_EXCEEDED",
+      "category": "resource",
+      "severity": "high",
+      "recovery_suggestions": [
+        "Use a smaller resource flavor",
+        "Reduce memory usage in your code"
+      ],
+      "context": {
+        "current_memory_mb": 1024,
+        "limit_memory_mb": 1024
+      }
+    }
+  }
+}
 ```
 
-### Background Task Management
+### CORS Support
 
-Control background cleanup and maintenance tasks:
+Enable CORS for web-based MCP clients:
 
-```python
-async with MicrosandboxWrapper() as wrapper:
-    # Pause background tasks during critical operations
-    await wrapper.pause_background_tasks()
-    
-    # Perform critical operations
-    # ...
-    
-    # Resume background tasks
-    await wrapper.resume_background_tasks()
-    
-    # Check background task status
-    status = await wrapper.get_background_task_status()
-    print(f"Overall status: {status['overall_status']}")
+```bash
+# Enable CORS for development
+export MCP_ENABLE_CORS=true
+python -m mcp_server.main
+
+# CORS headers are automatically added to all responses
+```
+
+### Health Monitoring
+
+Check server health and status:
+
+```bash
+# GET request to server root returns status
+curl http://localhost:8000/
+
+# Response includes server info and wrapper status
+{
+  "status": "healthy",
+  "server": "MCP Server for Microsandbox",
+  "version": "1.0.0",
+  "wrapper_status": "connected"
+}
 ```
 
 ## Error Handling
 
-The wrapper provides comprehensive error handling with specific exception types:
+The server provides MCP-compliant error responses following JSON-RPC 2.0 standards:
+
+### Error Code Mapping
+
+| Wrapper Exception | JSON-RPC Code | Description |
+|------------------|---------------|-------------|
+| ResourceLimitError | -32600 | Invalid Request - Resource limits exceeded |
+| ConfigurationError | -32603 | Internal Error - Server configuration issue |
+| SandboxCreationError | -32603 | Internal Error - Failed to create sandbox |
+| CodeExecutionError | -32603 | Internal Error - Code execution failed |
+| CommandExecutionError | -32603 | Internal Error - Command execution failed |
+| SessionNotFoundError | -32602 | Invalid Params - Session not found |
+| ConnectionError | -32603 | Internal Error - Connection to microsandbox failed |
+
+### Error Response Format
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32603,
+    "message": "Code execution failed: Syntax error in Python code",
+    "data": {
+      "error_code": "CODE_EXECUTION_ERROR",
+      "category": "execution",
+      "severity": "medium",
+      "recovery_suggestions": [
+        "Check your code syntax",
+        "Verify the template matches your code language"
+      ],
+      "context": {
+        "template": "python",
+        "session_id": "session-123"
+      }
+    }
+  }
+}
+```
+
+### Client Error Handling
+
+MCP clients should handle errors according to JSON-RPC 2.0 standards:
 
 ```python
-from microsandbox_wrapper.exceptions import (
-    MicrosandboxWrapperError,
-    ResourceLimitError,
-    CodeExecutionError,
-    SessionNotFoundError
-)
-
-async with MicrosandboxWrapper() as wrapper:
-    try:
-        result = await wrapper.execute_code("potentially_failing_code()")
-    except ResourceLimitError as e:
-        print(f"Resource limit exceeded: {e}")
-    except CodeExecutionError as e:
-        print(f"Code execution failed: {e}")
-    except SessionNotFoundError as e:
-        print(f"Session not found: {e}")
-    except MicrosandboxWrapperError as e:
-        print(f"General wrapper error: {e}")
+async def handle_mcp_response(response_data):
+    if "error" in response_data:
+        error = response_data["error"]
+        print(f"Error {error['code']}: {error['message']}")
+        
+        # Access additional error data if available
+        if "data" in error:
+            data = error["data"]
+            print(f"Error category: {data.get('category')}")
+            print(f"Recovery suggestions: {data.get('recovery_suggestions', [])}")
+    else:
+        # Handle successful response
+        result = response_data["result"]
+        print(f"Success: {result}")
 ```
 
 ## Testing
+
+### Prerequisites
+
+Ensure the microsandbox server is running before testing:
+
+```bash
+# Start microsandbox server
+./start_msbserver_debug.sh
+
+# Verify server health
+curl -s http://127.0.0.1:5555/api/v1/health
+```
+
+### Run Unit Tests
+
+```bash
+# Run all unit tests
+python -m pytest mcp-server/tests/ -v
+
+# Run specific test categories
+python -m pytest mcp-server/tests/test_protocol_compliance.py -v
+python -m pytest mcp-server/tests/test_tools.py -v
+python -m pytest mcp-server/tests/test_error_handling.py -v
+```
 
 ### Run Integration Tests
 
@@ -278,104 +489,262 @@ source mcp-server/test_environment_setup.sh
 # Run all integration tests
 python -m pytest mcp-server/integration_tests/ -v
 
-# Run specific test categories
+# Run specific integration tests
 python -m pytest mcp-server/integration_tests/test_end_to_end_functionality.py -v
 ```
 
-### Run Examples
+### Manual Testing with curl
 
 ```bash
-# Basic usage examples
-python mcp-server/examples/basic_usage.py
+# Start MCP server
+python -m mcp_server.main &
 
-# Advanced usage examples
-python mcp-server/examples/advanced_usage.py
+# Test tools/list endpoint
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+
+# Test execute_code tool
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "execute_code",
+      "arguments": {
+        "code": "print(\"Hello from MCP!\")",
+        "template": "python"
+      }
+    }
+  }'
+
+# Test server status
+curl http://localhost:8000/
 ```
 
 ## Architecture
 
-The wrapper consists of several key components:
+The MCP server acts as a lightweight protocol adapter:
 
 ```
+MCP Client
+    ↓ (HTTP JSON-RPC)
+MCP Server
+├── RequestHandler      # HTTP request processing
+├── ToolRegistry       # MCP tool management
+├── ErrorHandler       # Exception to MCP error conversion
+└── MCPServer          # Main server coordination
+    ↓ (Python API)
 MicrosandboxWrapper
-├── SessionManager      # Manages sandbox sessions and lifecycle
-├── ResourceManager     # Handles resource limits and cleanup
-├── ConfigManager       # Manages configuration and environment
-└── ErrorManager        # Provides unified error handling
-
-Integration with:
-├── Microsandbox SDK    # Low-level sandbox operations
-├── Background Tasks    # Cleanup and maintenance
-└── Logging System     # Comprehensive logging and monitoring
+├── SessionManager     # Sandbox session lifecycle
+├── ResourceManager    # Resource limits and cleanup
+├── ConfigManager      # Configuration management
+└── ErrorManager       # Wrapper error handling
+    ↓ (HTTP API)
+Microsandbox Server
 ```
+
+### Component Responsibilities
+
+- **MCP Server**: Protocol compliance, tool routing, error conversion
+- **MicrosandboxWrapper**: Session management, resource control, business logic
+- **Microsandbox Server**: Low-level sandbox operations and container management
+
+### Data Flow
+
+1. MCP client sends JSON-RPC request over HTTP
+2. RequestHandler validates and parses the request
+3. ToolRegistry routes to appropriate tool implementation
+4. Tool calls MicrosandboxWrapper with validated parameters
+5. Wrapper executes operation and returns structured result
+6. Tool formats result for MCP protocol compliance
+7. Server returns JSON-RPC response to client
 
 ## Performance Considerations
 
 ### Session Reuse
 
-Reuse sessions for better performance:
+Reuse sessions across MCP tool calls for better performance:
 
-```python
-# Good: Reuse session for related operations
-session_id = None
-for i in range(10):
-    result = await wrapper.execute_code(
-        f"print('Operation {i}')",
-        session_id=session_id
-    )
-    session_id = result.session_id  # Reuse for next operation
+```json
+// First call creates session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code", 
+    "arguments": {"code": "x = 42", "template": "python"}
+  }
+}
+
+// Reuse session_id from response in subsequent calls
+{
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "code": "print(f'x = {x}')",
+      "template": "python", 
+      "session_id": "session-123"
+    }
+  }
+}
 ```
 
 ### Resource Planning
 
-Plan resources based on your workload:
+Configure wrapper resources based on expected workload:
 
-```python
-# For high-throughput, low-resource operations
-config = WrapperConfig(
-    max_concurrent_sessions=50,
-    default_flavor=SandboxFlavor.SMALL,
-    session_timeout=300  # 5 minutes
-)
+```bash
+# High-throughput, low-resource workload
+export MSB_MAX_SESSIONS="50"
+export MSB_DEFAULT_FLAVOR="small"
+export MSB_SESSION_TIMEOUT="300"  # 5 minutes
 
-# For resource-intensive, long-running operations
-config = WrapperConfig(
-    max_concurrent_sessions=5,
-    default_flavor=SandboxFlavor.LARGE,
-    session_timeout=3600  # 1 hour
-)
+# Resource-intensive, long-running workload  
+export MSB_MAX_SESSIONS="5"
+export MSB_DEFAULT_FLAVOR="large"
+export MSB_SESSION_TIMEOUT="3600"  # 1 hour
+```
+
+### Concurrent Requests
+
+The server handles multiple MCP requests concurrently. Monitor resource usage:
+
+```bash
+# Monitor active sessions
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}'
 ```
 
 ## Best Practices
 
-1. **Use Context Managers**: Always use `async with` for automatic cleanup
-2. **Reuse Sessions**: Reuse sessions for related operations to improve performance
-3. **Choose Appropriate Flavors**: Match resource allocation to workload requirements
-4. **Handle Errors Gracefully**: Implement proper error handling for production use
-5. **Monitor Resources**: Keep track of resource usage to prevent limits
-6. **Configure Timeouts**: Set appropriate timeouts for your use case
-7. **Use Volume Mappings**: Share data efficiently between host and sandbox
+1. **Session Management**: Reuse sessions for related operations to improve performance
+2. **Resource Flavors**: Choose appropriate flavors based on workload requirements
+3. **Error Handling**: Implement proper JSON-RPC error handling in MCP clients
+4. **Timeouts**: Set appropriate execution timeouts for long-running operations
+5. **Monitoring**: Regularly check session status and resource usage
+6. **CORS Configuration**: Only enable CORS when needed for web clients
+7. **Logging**: Use appropriate log levels for production deployments
+8. **Health Checks**: Implement health monitoring for both MCP and microsandbox servers
 
 ## Troubleshooting
 
-### Quick Health Check
+### Quick Health Checks
 
 ```bash
-# Check if server is running
+# Check microsandbox server
 curl -s http://127.0.0.1:5555/api/v1/health
 
-# Run health check script
-python mcp-server/examples/health_check.py
+# Check MCP server status
+curl http://localhost:8000/
+
+# Test MCP protocol
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
 ### Common Issues
 
-1. **Cannot connect to server**: Ensure microsandbox server is running
-2. **Resource limits exceeded**: Increase limits or use smaller flavors
-3. **Session timeouts**: Increase session timeout or implement keep-alive
-4. **Volume mapping issues**: Check paths and permissions
+1. **MCP Server won't start**
+   - Check if microsandbox server is running first
+   - Verify port is not already in use
+   - Check environment variable configuration
+
+2. **Tool calls fail with connection errors**
+   - Ensure microsandbox server is accessible
+   - Check MSB_SERVER_URL configuration
+   - Verify network connectivity
+
+3. **Resource limit errors**
+   - Increase MSB_MAX_SESSIONS or MSB_MAX_TOTAL_MEMORY_MB
+   - Use smaller resource flavors (small instead of large)
+   - Stop unused sessions with stop_session tool
+
+4. **Session not found errors**
+   - Check if session_id is valid and active
+   - Sessions may have expired due to timeout
+   - Use get_sessions tool to list active sessions
+
+5. **CORS issues with web clients**
+   - Set MCP_ENABLE_CORS=true
+   - Check browser console for CORS errors
+   - Verify client is sending proper Content-Type headers
+
+### Debug Mode
+
+Run with debug logging for detailed troubleshooting:
+
+```bash
+python -m mcp_server.main --log-level DEBUG
+```
 
 See the [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md) for detailed solutions.
+
+## Deployment
+
+### Docker Deployment
+
+Create a Dockerfile for containerized deployment:
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY mcp-server/ ./mcp-server/
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+EXPOSE 8000
+
+CMD ["python", "-m", "mcp_server.main"]
+```
+
+Build and run:
+
+```bash
+docker build -t mcp-server .
+docker run -d -p 8000:8000 \
+  -e MCP_SERVER_HOST=0.0.0.0 \
+  -e MSB_SERVER_URL=http://microsandbox:5555 \
+  mcp-server
+```
+
+### Production Deployment
+
+For production deployments, consider:
+
+1. **Process Management**: Use systemd, supervisor, or similar
+2. **Reverse Proxy**: Place behind nginx or similar for SSL/load balancing
+3. **Monitoring**: Implement health checks and monitoring
+4. **Logging**: Configure structured logging with log rotation
+5. **Security**: Restrict network access and use proper authentication
+
+Example systemd service:
+
+```ini
+[Unit]
+Description=MCP Server for Microsandbox
+After=network.target
+
+[Service]
+Type=simple
+User=mcp-server
+WorkingDirectory=/opt/mcp-server
+Environment=MCP_SERVER_HOST=127.0.0.1
+Environment=MCP_SERVER_PORT=8000
+Environment=MSB_SERVER_URL=http://127.0.0.1:5555
+ExecStart=/opt/mcp-server/venv/bin/python -m mcp_server.main
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
 
 ## Contributing
 
@@ -389,13 +758,14 @@ See the [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md) for detailed solutions
 
 ```bash
 # Install development dependencies
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
-# Run tests
-python -m pytest tests/ -v
+# Run unit tests
+python -m pytest mcp-server/tests/ -v
 
-# Run integration tests
-./mcp-server/run_integration_tests.sh
+# Run integration tests (requires microsandbox server)
+./start_msbserver_debug.sh
+python -m pytest mcp-server/integration_tests/ -v
 ```
 
 ## License
@@ -404,11 +774,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-- **Documentation**: See the docs/ directory for comprehensive guides
-- **Examples**: Check examples/ directory for usage patterns
+- **Documentation**: See the comprehensive guides in this directory
+- **Examples**: Check examples/ directory for usage patterns  
 - **Issues**: Report bugs and feature requests via GitHub issues
-- **Discussions**: Join community discussions for questions and ideas
+- **MCP Protocol**: See [MCP specification](https://spec.modelcontextprotocol.io/) for protocol details
 
 ---
 
-**Ready to get started?** Check out the [Basic Usage Examples](examples/basic_usage.py) or dive into the [API Documentation](API_DOCUMENTATION.md)!
+**Ready to get started?** Start the microsandbox server, then run the MCP server and test with your favorite MCP client!

@@ -1,20 +1,25 @@
-# Core dependencies for MCP Server
-aiohttp>=3.8.0
-asyncio-mqtt>=0.11.0
-pydantic>=1.10.0
+# HTTP streamable MCP server dependencies
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
 
-# MicroSandbox SDK (assuming it's available via pip or local install)
-# microsandbox>=0.1.0
+# HTTP client for microsandbox communication
+aiohttp>=3.8.0
+
+# Logging and monitoring
+structlog>=22.0.0
 
 # Testing dependencies
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 pytest-mock>=3.10.0
 
-# Logging and monitoring
-structlog>=22.0.0
+# MCP SDK for integration testing
+mcp>=1.0.0
 
-# Development dependencies
+# Development dependencies (optional)
 black>=22.0.0
 flake8>=5.0.0
 mypy>=1.0.0
+
+# Note: microsandbox_wrapper is included as a local package in this repository

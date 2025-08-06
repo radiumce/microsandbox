@@ -26,7 +26,7 @@ def test_config() -> WrapperConfig:
     return WrapperConfig.from_env()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def wrapper(test_config: WrapperConfig) -> AsyncGenerator[MicrosandboxWrapper, None]:
     """Create and start a MicrosandboxWrapper instance for testing."""
     wrapper_instance = MicrosandboxWrapper(test_config)
