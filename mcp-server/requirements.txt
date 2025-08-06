@@ -6,6 +6,9 @@ pydantic>=2.0.0
 # HTTP client for microsandbox communication
 aiohttp>=3.8.0
 
+# MCP SDK for official MCP protocol support
+mcp>=1.0.0
+
 # Logging and monitoring
 structlog>=22.0.0
 

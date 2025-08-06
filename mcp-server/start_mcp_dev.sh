@@ -160,13 +160,13 @@ if command -v lsof &> /dev/null && lsof -i :${MCP_SERVER_PORT} > /dev/null 2>&1;
 fi
 
 # Install requirements if needed
-if ! $PYTHON_CMD -c "import fastapi, uvicorn, aiohttp" &> /dev/null; then
+if ! $PYTHON_CMD -c "import fastapi, uvicorn, aiohttp, mcp" &> /dev/null; then
     log_info "Installing requirements..."
-    if pip install -r requirements.txt; then
+    if $PYTHON_CMD -m pip install -r requirements.txt; then
         log_info "✓ Requirements installed successfully"
     else
         log_error "Failed to install requirements"
-        log_error "Please check requirements.txt and try manually: pip install -r requirements.txt"
+        log_error "Please check requirements.txt and try manually: python -m pip install -r requirements.txt"
         exit 1
     fi
 else
@@ -189,4 +189,4 @@ log_info "Press Ctrl+C to stop"
 
 # Change to script directory and start server
 cd "$SCRIPT_DIR"
-exec $PYTHON_CMD -m mcp_server.main --log-level DEBUG
+exec $PYTHON_CMD -m mcp_server.main_sdk --transport streamable-http

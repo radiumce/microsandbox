@@ -235,7 +235,8 @@ def setup_logging(
     
     # Setup console handler
     if enable_console:
-        console_handler = logging.StreamHandler(sys.stdout)
+        # Always use stderr for console output to avoid interfering with MCP JSON communication on stdout
+        console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setFormatter(formatter)
         console_handler.setLevel(getattr(logging, level, logging.INFO))
         logger.addHandler(console_handler)
