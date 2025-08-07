@@ -29,7 +29,7 @@ Transport Options:
 
 Environment Variables:
   MCP_SERVER_HOST     Server host address for HTTP transports (default: localhost)
-  MCP_SERVER_PORT     Server port number for HTTP transports (default: 8000)
+  MCP_SERVER_PORT     Server port number for HTTP transports (default: 8775)
   MCP_ENABLE_CORS     Enable CORS support for HTTP transports (default: false)
 
 Examples:
@@ -83,7 +83,7 @@ def get_server_config(args: argparse.Namespace) -> dict:
     if args.transport in ["streamable-http", "sse"]:
         # HTTP-based transports need host and port
         config["host"] = args.host or os.getenv("MCP_SERVER_HOST", "localhost")
-        config["port"] = args.port or int(os.getenv("MCP_SERVER_PORT", "8000"))
+        config["port"] = args.port or int(os.getenv("MCP_SERVER_PORT", "8775"))
 
         if args.enable_cors or os.getenv("MCP_ENABLE_CORS", "false").lower() == "true":
             config["cors"] = True
@@ -134,26 +134,13 @@ def main():
             # Don't log anything for stdio to avoid interfering with MCP protocol
             server_app.run(transport="stdio")
         elif args.transport == "streamable-http":
-            # For HTTP transports, we need to use a different approach
-            # The FastMCP.run() method doesn't accept host/port parameters
-            if config.get("host") != "localhost" or config.get("port") != 8000:
-                # Custom host/port: use Starlette + uvicorn approach
-                logger.info(f"Using Streamable HTTP transport on {config['host']}:{config['port']}")
-                run_http_server(server_app, config)
-            else:
-                # Default host/port: use simple run method
-                logger.info("Using Streamable HTTP transport on default host:port")
-                server_app.run(transport="streamable-http")
+            # For HTTP transports, always use custom uvicorn approach to have full control
+            logger.info(f"Using Streamable HTTP transport on {config['host']}:{config['port']}")
+            run_http_server(server_app, config)
         elif args.transport == "sse":
-            # For SSE transport, we need to use a different approach
-            if config.get("host") != "localhost" or config.get("port") != 8000:
-                # Custom host/port: use Starlette + uvicorn approach
-                logger.info(f"Using SSE transport on {config['host']}:{config['port']}")
-                run_sse_server(server_app, config)
-            else:
-                # Default host/port: use simple run method
-                logger.info("Using SSE transport on default host:port")
-                server_app.run(transport="sse")
+            # For SSE transport, always use custom uvicorn approach to have full control
+            logger.info(f"Using SSE transport on {config['host']}:{config['port']}")
+            run_sse_server(server_app, config)
 
     except ConfigurationError as e:
         logger.error(f"Configuration error: {e}")

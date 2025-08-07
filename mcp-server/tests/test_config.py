@@ -22,7 +22,7 @@ class TestMCPServerConfig:
             config = MCPServerConfig()
             
             assert config.host == "localhost"
-            assert config.port == 8000
+            assert config.port == 8775
             assert config.enable_cors is False
             assert config.microsandbox_server_url == "http://localhost:5555"
             assert config.microsandbox_api_key is None
@@ -134,7 +134,7 @@ class TestMCPServerConfig:
         """Test validation with valid configuration."""
         with patch.dict(os.environ, {
             "MCP_SERVER_HOST": "localhost",
-            "MCP_SERVER_PORT": "8000",
+            "MCP_SERVER_PORT": "8775",
             "MICROSANDBOX_SERVER_URL": "http://localhost:5555"
         }, clear=True):
             config = MCPServerConfig()
@@ -229,7 +229,7 @@ class TestMCPServerConfig:
         
         assert "MCPServerConfig" in config_str
         assert "host=localhost" in config_str
-        assert "port=8000" in config_str
+        assert "port=8775" in config_str
         assert "enable_cors=False" in config_str
     
     def test_repr_representation(self):
@@ -239,7 +239,7 @@ class TestMCPServerConfig:
         
         assert "MCPServerConfig" in config_repr
         assert "host='localhost'" in config_repr
-        assert "port=8000" in config_repr
+        assert "port=8775" in config_repr
     
     def test_config_immutability_after_validation(self):
         """Test that configuration values can be modified after creation."""
@@ -277,7 +277,7 @@ class TestMCPServerConfig:
             
             # Required variables should have defaults
             assert config.host == "localhost"
-            assert config.port == 8000
+            assert config.port == 8775
     
     def test_url_validation_schemes(self):
         """Test URL validation with different schemes."""

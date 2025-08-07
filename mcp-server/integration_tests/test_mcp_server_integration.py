@@ -46,7 +46,7 @@ class MCPTestClient:
     to test the server's JSON-RPC 2.0 message handling.
     """
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8775"):
         self.base_url = base_url
         self.session: Optional[aiohttp.ClientSession] = None
         self._request_id = 0

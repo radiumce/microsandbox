@@ -11,16 +11,16 @@ This guide provides solutions for common issues encountered when running the HTT
 curl -s http://127.0.0.1:5555/api/v1/health
 
 # Check MCP server status
-curl http://localhost:8000/
+curl http://localhost:8775/
 
 # Test MCP protocol
-curl -X POST http://localhost:8000/mcp \
+curl -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 
 # Check if ports are in use
-netstat -tlnp | grep -E ':(8000|5555)'
-lsof -i :8000
+netstat -tlnp | grep -E ':(8775|5555)'
+lsof -i :8775
 lsof -i :5555
 ```
 
@@ -54,7 +54,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 1. **Port Already in Use:**
    ```bash
    # Find what's using the port
-   sudo lsof -i :8000
+   sudo lsof -i :8775
    
    # Kill the process or use a different port
    export MCP_SERVER_PORT=8001
@@ -143,7 +143,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 1. **Invalid JSON Format:**
    ```bash
    # Test with valid JSON
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{
        "jsonrpc": "2.0",
@@ -159,7 +159,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 2. **Missing Content-Type Header:**
    ```bash
    # Always include Content-Type header
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
    ```
@@ -167,7 +167,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 3. **Invalid Method Names:**
    ```bash
    # List available methods
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
    
@@ -186,7 +186,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 1. **Resource Limit Errors:**
    ```bash
    # Check current resource usage
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}'
    
@@ -201,12 +201,12 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 2. **Session Management Issues:**
    ```bash
    # List active sessions
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}'
    
    # Stop problematic sessions
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"stop_session","arguments":{"session_id":"session-123"}}}'
    ```
@@ -214,7 +214,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 3. **Code Execution Errors:**
    ```bash
    # Test with simple code first
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{
        "jsonrpc": "2.0",
@@ -259,13 +259,13 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
         -H "Access-Control-Request-Method: POST" \
         -H "Access-Control-Request-Headers: Content-Type" \
         -X OPTIONS \
-        http://localhost:8000/mcp
+        http://localhost:8775/mcp
    ```
 
 3. **Browser-Specific Issues:**
    ```bash
    # Test with curl first to isolate browser issues
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -H "Origin: http://localhost:3000" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
@@ -308,7 +308,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 3. **Session Management:**
    ```bash
    # Check for session leaks
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}'
    
@@ -348,7 +348,7 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
 3. **Session Cleanup:**
    ```bash
    # Force session cleanup
-   curl -X POST http://localhost:8000/mcp \
+   curl -X POST http://localhost:8775/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}'
    
@@ -457,10 +457,10 @@ grep "Connection" /var/log/mcp-server/mcp-server.log
    ```bash
    # Check port usage
    docker ps
-   netstat -tlnp | grep :8000
+   netstat -tlnp | grep :8775
    
    # Use different port
-   docker run -p 8001:8000 mcp-server
+   docker run -p 8001:8775 mcp-server
    ```
 
 3. **Environment Variables:**
@@ -523,15 +523,15 @@ export MSB_LOG_FORMAT=json
 
 ```bash
 # Monitor network traffic
-sudo tcpdump -i lo port 8000
+sudo tcpdump -i lo port 8775
 sudo tcpdump -i lo port 5555
 
 # Test with netcat
-nc -zv localhost 8000
+nc -zv localhost 8775
 nc -zv localhost 5555
 
 # HTTP debugging with curl
-curl -v -X POST http://localhost:8000/mcp \
+curl -v -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
@@ -596,7 +596,7 @@ python -m mcp_server.main
 
 ```bash
 # Backup session data (if applicable)
-curl -X POST http://localhost:8000/mcp \
+curl -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}' \
   > sessions_backup.json
@@ -611,7 +611,7 @@ curl -X POST http://localhost:8000/mcp \
 
 ```bash
 # Set up health checks
-*/5 * * * * curl -f http://localhost:8000/ || systemctl restart mcp-server
+*/5 * * * * curl -f http://localhost:8775/ || systemctl restart mcp-server
 
 # Log rotation
 sudo logrotate -f /etc/logrotate.d/mcp-server
@@ -634,7 +634,7 @@ watch -n 30 'ps aux | grep mcp_server'
 # Weekly maintenance script
 #!/bin/bash
 # Check server health
-curl -f http://localhost:8000/ || exit 1
+curl -f http://localhost:8775/ || exit 1
 
 # Clean up old logs
 find /var/log/mcp-server -name "*.log" -mtime +7 -delete

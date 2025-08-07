@@ -58,30 +58,12 @@ load_env_file ".env"          # General config
 load_env_file ".env.local"    # Local overrides
 
 # =============================================================================
-# DEVELOPMENT CONFIGURATION
+# ENVIRONMENT VALIDATION
 # =============================================================================
 
-# MCP Server Configuration
-export MCP_SERVER_HOST="localhost"
-export MCP_SERVER_PORT="8001"
-export MCP_ENABLE_CORS="true"
-
-# Microsandbox Connection - Use simple configuration like working manual command
-export MSB_SERVER_URL="http://127.0.0.1:5555"
-
-# Session Management - Development friendly
-export MSB_MAX_SESSIONS="5"
-export MSB_SESSION_TIMEOUT="1800"          # 30 minutes
-export MSB_DEFAULT_FLAVOR="small"
-export MSB_SESSION_CLEANUP_INTERVAL="60"   # 1 minute
-
-# Resource Limits - Conservative for development
-export MSB_MAX_TOTAL_MEMORY_MB="4096"      # 4GB
-export MSB_MAX_EXECUTION_TIME="300"        # 5 minutes
-
-# Logging - Verbose for development
-export MSB_LOG_LEVEL="DEBUG"
-export MSB_LOG_FORMAT="text"
+# All configuration should be defined in .env files
+# The script relies on environment variables loaded from .env files
+log_info "Environment variables loaded from .env files"
 
 # =============================================================================
 # SETUP DEVELOPMENT ENVIRONMENT
@@ -119,8 +101,9 @@ log_info "Development environment setup complete"
 # =============================================================================
 
 # Check microsandbox server
-if ! curl -s --connect-timeout 3 "${MSB_SERVER_URL}/api/v1/health" > /dev/null 2>&1; then
-    log_warn "Microsandbox server not accessible at ${MSB_SERVER_URL}"
+MSB_URL="${MSB_SERVER_URL:-http://127.0.0.1:5555}"
+if ! curl -s --connect-timeout 3 "${MSB_URL}/api/v1/health" > /dev/null 2>&1; then
+    log_warn "Microsandbox server not accessible at ${MSB_URL}"
     log_warn "Starting microsandbox server..."
     
     # Try to start microsandbox server if script exists
@@ -131,7 +114,7 @@ if ! curl -s --connect-timeout 3 "${MSB_SERVER_URL}/api/v1/health" > /dev/null 2
         # Wait for server to start
         log_info "Waiting for microsandbox server to start..."
         for i in {1..30}; do
-            if curl -s --connect-timeout 2 "${MSB_SERVER_URL}/api/v1/health" > /dev/null 2>&1; then
+            if curl -s --connect-timeout 2 "${MSB_URL}/api/v1/health" > /dev/null 2>&1; then
                 log_info "✓ Microsandbox server is now running"
                 break
             fi
@@ -152,8 +135,9 @@ else
 fi
 
 # Check if port is available
-if command -v lsof &> /dev/null && lsof -i :${MCP_SERVER_PORT} > /dev/null 2>&1; then
-    log_error "Port ${MCP_SERVER_PORT} is already in use"
+MCP_PORT="${MCP_SERVER_PORT:-8775}"
+if command -v lsof &> /dev/null && lsof -i :${MCP_PORT} > /dev/null 2>&1; then
+    log_error "Port ${MCP_PORT} is already in use"
     exit 1
 fi
 
@@ -176,14 +160,14 @@ fi
 # =============================================================================
 
 log_info "Configuration:"
-echo "  Server: http://${MCP_SERVER_HOST}:${MCP_SERVER_PORT}"
-echo "  CORS: ${MCP_ENABLE_CORS}"
-echo "  Max Sessions: ${MSB_MAX_SESSIONS}"
-echo "  Log Level: ${MSB_LOG_LEVEL}"
+echo "  Server: http://${MCP_SERVER_HOST:-localhost}:${MCP_SERVER_PORT:-8775}"
+echo "  CORS: ${MCP_ENABLE_CORS:-false}"
+echo "  Max Sessions: ${MSB_MAX_SESSIONS:-5}"
+echo "  Log Level: ${MSB_LOG_LEVEL:-DEBUG}"
 
 log_info "Starting MCP Server..."
 log_info "Press Ctrl+C to stop"
 
 # Change to script directory and start server
 cd "$SCRIPT_DIR"
-exec $PYTHON_CMD -m mcp_server.main --transport streamable-http --port ${MCP_SERVER_PORT}
+exec $PYTHON_CMD -m mcp_server.main --transport streamable-http --port ${MCP_SERVER_PORT:-8775}

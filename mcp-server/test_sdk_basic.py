@@ -138,7 +138,7 @@ async def main_test():
         print("🎉 ALL TESTS PASSED! SDK implementation is working correctly.")
         print("\nYou can now use the new SDK-based MCP server:")
         print("  python -m mcp_server.main --transport stdio")
-        print("  python -m mcp_server.main --transport streamable-http --port 8000")
+        print("  python -m mcp_server.main --transport streamable-http --port 8775")
     else:
         print("❌ Some tests failed. Please check the errors above.")
     print("=" * 60)

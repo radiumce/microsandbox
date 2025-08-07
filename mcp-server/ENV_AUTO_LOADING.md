@@ -71,7 +71,7 @@ echo "MSB_LOG_LEVEL=DEBUG" >> .env.local
 ### .env.dev (开发环境)
 ```bash
 MCP_SERVER_HOST=localhost
-MCP_SERVER_PORT=8000
+MCP_SERVER_PORT=8775
 MCP_ENABLE_CORS=true
 MSB_MAX_SESSIONS=5
 MSB_LOG_LEVEL=DEBUG
@@ -102,7 +102,7 @@ MSB_SHARED_VOLUME_PATH=["./my-local-data:/workspace"]
 
 **`.env`:**
 ```bash
-MCP_SERVER_PORT=8000
+MCP_SERVER_PORT=8775
 MSB_LOG_LEVEL=INFO
 MSB_MAX_SESSIONS=10
 ```

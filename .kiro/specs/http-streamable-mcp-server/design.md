@@ -49,7 +49,7 @@ class MCPServer:
         self,
         wrapper: MicrosandboxWrapper,
         host: str = "localhost",
-        port: int = 8000,
+        port: int = 8775,
 
         enable_cors: bool = False
     ):
@@ -303,7 +303,7 @@ sequenceDiagram
 @dataclass
 class MCPServerConfig:
     host: str = "localhost"
-    port: int = 8000
+    port: int = 8775
 
     enable_cors: bool = False
     
@@ -311,7 +311,7 @@ class MCPServerConfig:
     def from_env(cls) -> 'MCPServerConfig':
         return cls(
             host=os.getenv("MCP_SERVER_HOST", "localhost"),
-            port=int(os.getenv("MCP_SERVER_PORT", "8000")),
+            port=int(os.getenv("MCP_SERVER_PORT", "8775")),
 
             enable_cors=os.getenv("MCP_ENABLE_CORS", "false").lower() == "true"
         )

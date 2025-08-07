@@ -31,8 +31,8 @@
 # 服务器绑定地址（默认：localhost）
 export MCP_SERVER_HOST="localhost"
 
-# 服务器端口（默认：8000）
-export MCP_SERVER_PORT="8000"
+# 服务器端口（默认：8775）
+export MCP_SERVER_PORT="8775"
 
 # 启用CORS支持（默认：false）
 export MCP_ENABLE_CORS="false"

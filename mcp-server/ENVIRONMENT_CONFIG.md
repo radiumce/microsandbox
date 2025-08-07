@@ -9,7 +9,7 @@ This document provides comprehensive information about configuring the HTTP Stre
 | Variable | Default | Description | Example |
 |----------|---------|-------------|---------|
 | `MCP_SERVER_HOST` | `localhost` | Server host address to bind to | `0.0.0.0`, `127.0.0.1` |
-| `MCP_SERVER_PORT` | `8000` | Server port number | `8080`, `9000` |
+| `MCP_SERVER_PORT` | `8775` | Server port number | `8080`, `9000` |
 | `MCP_ENABLE_CORS` | `false` | Enable CORS support for web clients | `true`, `false` |
 
 ### Example Configurations
@@ -17,7 +17,7 @@ This document provides comprehensive information about configuring the HTTP Stre
 #### Development Environment
 ```bash
 export MCP_SERVER_HOST="localhost"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8775"
 export MCP_ENABLE_CORS="true"
 ```
 
@@ -31,7 +31,7 @@ export MCP_ENABLE_CORS="false"
 #### Docker Environment
 ```bash
 export MCP_SERVER_HOST="0.0.0.0"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8775"
 export MCP_ENABLE_CORS="true"
 ```
 
@@ -89,7 +89,7 @@ For handling many small, quick operations:
 ```bash
 # MCP Server
 export MCP_SERVER_HOST="0.0.0.0"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8775"
 export MCP_ENABLE_CORS="false"
 
 # Wrapper Configuration
@@ -107,7 +107,7 @@ For handling fewer, long-running operations:
 ```bash
 # MCP Server
 export MCP_SERVER_HOST="127.0.0.1"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8775"
 export MCP_ENABLE_CORS="false"
 
 # Wrapper Configuration
@@ -125,7 +125,7 @@ For local development with debugging:
 ```bash
 # MCP Server
 export MCP_SERVER_HOST="localhost"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8775"
 export MCP_ENABLE_CORS="true"
 
 # Wrapper Configuration
@@ -150,11 +150,11 @@ services:
   mcp-server:
     image: mcp-server:latest
     ports:
-      - "8000:8000"
+      - "8775:8775"
     environment:
       # MCP Server
       MCP_SERVER_HOST: "0.0.0.0"
-      MCP_SERVER_PORT: "8000"
+      MCP_SERVER_PORT: "8775"
       MCP_ENABLE_CORS: "true"
       
       # Wrapper Configuration
@@ -210,7 +210,7 @@ You can use a `.env` file to manage configuration:
 ```bash
 # .env file
 MCP_SERVER_HOST=localhost
-MCP_SERVER_PORT=8000
+MCP_SERVER_PORT=8775
 MCP_ENABLE_CORS=true
 
 MSB_SERVER_URL=http://127.0.0.1:5555
@@ -252,7 +252,7 @@ python -m mcp_server.main
 1. **Port already in use**
    ```bash
    # Check what's using the port
-   lsof -i :8000
+   lsof -i :8775
    
    # Use a different port
    export MCP_SERVER_PORT=8001

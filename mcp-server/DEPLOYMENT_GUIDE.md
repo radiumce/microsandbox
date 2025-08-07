@@ -30,7 +30,7 @@ pip install -r requirements.txt
 python -m mcp_server.main
 
 # 5. Test MCP server
-curl http://localhost:8000/
+curl http://localhost:8775/
 ```
 
 ### Production Quick Start
@@ -76,11 +76,11 @@ RUN useradd -m -u 1000 mcp-server && \
 USER mcp-server
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8775
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -f http://localhost:8775/ || exit 1
 
 # Start server
 CMD ["python", "-m", "mcp_server.main"]
@@ -95,7 +95,7 @@ docker build -t mcp-server:latest .
 # Run container
 docker run -d \
     --name mcp-server \
-    -p 8000:8000 \
+    -p 8775:8775 \
     -e MCP_SERVER_HOST=0.0.0.0 \
     -e MSB_SERVER_URL=http://microsandbox:5555 \
     mcp-server:latest
@@ -113,10 +113,10 @@ services:
     build: .
     container_name: mcp-server
     ports:
-      - "8000:8000"
+      - "8775:8775"
     environment:
       MCP_SERVER_HOST: "0.0.0.0"
-      MCP_SERVER_PORT: "8000"
+      MCP_SERVER_PORT: "8775"
       MCP_ENABLE_CORS: "true"
       MSB_SERVER_URL: "http://microsandbox:5555"
       MSB_MAX_SESSIONS: "20"
@@ -131,7 +131,7 @@ services:
       - microsandbox
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8775/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -203,12 +203,12 @@ spec:
       - name: mcp-server
         image: mcp-server:latest
         ports:
-        - containerPort: 8000
+        - containerPort: 8775
         env:
         - name: MCP_SERVER_HOST
           value: "0.0.0.0"
         - name: MCP_SERVER_PORT
-          value: "8000"
+          value: "8775"
         - name: MSB_SERVER_URL
           value: "http://microsandbox-service:5555"
         - name: MSB_MAX_SESSIONS
@@ -230,13 +230,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /
-            port: 8000
+            port: 8775
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /
-            port: 8000
+            port: 8775
           initialDelaySeconds: 5
           periodSeconds: 5
         volumeMounts:
@@ -262,7 +262,7 @@ spec:
   ports:
   - protocol: TCP
     port: 80
-    targetPort: 8000
+    targetPort: 8775
   type: LoadBalancer
 
 ---
@@ -339,7 +339,7 @@ image:
 service:
   type: LoadBalancer
   port: 80
-  targetPort: 8000
+  targetPort: 8775
 
 ingress:
   enabled: true
@@ -359,7 +359,7 @@ ingress:
 config:
   mcpServer:
     host: "0.0.0.0"
-    port: 8000
+    port: 8775
     enableCors: false
   microsandbox:
     serverUrl: "http://microsandbox-service:5555"
@@ -417,7 +417,7 @@ Group=mcp-server
 WorkingDirectory=/opt/mcp-server
 Environment=PATH=/opt/mcp-server/venv/bin
 Environment=MCP_SERVER_HOST=127.0.0.1
-Environment=MCP_SERVER_PORT=8000
+Environment=MCP_SERVER_PORT=8775
 Environment=MCP_ENABLE_CORS=false
 Environment=MSB_SERVER_URL=http://127.0.0.1:5555
 Environment=MSB_MAX_SESSIONS=20
@@ -484,7 +484,7 @@ Create `/etc/nginx/sites-available/mcp-server`:
 
 ```nginx
 upstream mcp_server {
-    server 127.0.0.1:8000;
+    server 127.0.0.1:8775;
     # Add more servers for load balancing
     # server 127.0.0.1:8001;
     # server 127.0.0.1:8002;
@@ -595,12 +595,12 @@ Create `/etc/apache2/sites-available/mcp-server.conf`:
     
     # Proxy configuration
     ProxyPreserveHost On
-    ProxyPass / http://127.0.0.1:8000/
-    ProxyPassReverse / http://127.0.0.1:8000/
+    ProxyPass / http://127.0.0.1:8775/
+    ProxyPassReverse / http://127.0.0.1:8775/
     
     # Set headers
-    ProxyPassReverse / http://127.0.0.1:8000/
-    ProxyPassReverseMatch ^/(.*) http://127.0.0.1:8000/$1
+    ProxyPassReverse / http://127.0.0.1:8775/
+    ProxyPassReverseMatch ^/(.*) http://127.0.0.1:8775/$1
 </VirtualHost>
 ```
 
@@ -665,7 +665,7 @@ Create monitoring scripts:
 #!/bin/bash
 # health-check.sh
 
-MCP_URL="http://localhost:8000"
+MCP_URL="http://localhost:8775"
 MSB_URL="http://localhost:5555/api/v1/health"
 
 # Check MCP server
@@ -697,7 +697,7 @@ echo "All services: OK"
    sudo ufw allow 22/tcp    # SSH
    sudo ufw allow 80/tcp    # HTTP
    sudo ufw allow 443/tcp   # HTTPS
-   sudo ufw deny 8000/tcp   # Block direct access to MCP server
+   sudo ufw deny 8775/tcp   # Block direct access to MCP server
    sudo ufw enable
    ```
 
@@ -726,8 +726,8 @@ echo "All services: OK"
 1. **Port Conflicts**:
    ```bash
    # Check port usage
-   sudo netstat -tlnp | grep :8000
-   sudo lsof -i :8000
+   sudo netstat -tlnp | grep :8775
+   sudo lsof -i :8775
    ```
 
 2. **Permission Issues**:

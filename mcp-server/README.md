@@ -90,7 +90,7 @@ async def call_mcp_tool():
     
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            "http://localhost:8000/mcp",
+            "http://localhost:8775/mcp",
             json=request,
             headers={"Content-Type": "application/json"}
         ) as response:
@@ -234,7 +234,7 @@ Configure the MCP server using environment variables:
 ```bash
 # MCP Server Configuration
 export MCP_SERVER_HOST="localhost"        # Server host address (default: localhost)
-export MCP_SERVER_PORT="8000"            # Server port number (default: 8000)
+export MCP_SERVER_PORT="8775"            # Server port number (default: 8775)
 export MCP_ENABLE_CORS="false"           # Enable CORS support (default: false)
 
 # Microsandbox Wrapper Configuration (inherited)
@@ -265,7 +265,7 @@ python -m mcp_server.main --host 0.0.0.0 --port 9000 --enable-cors --log-level D
 ```bash
 # Development with CORS enabled for web clients
 export MCP_SERVER_HOST="localhost"
-export MCP_SERVER_PORT="8000"
+export MCP_SERVER_PORT="8775"
 export MCP_ENABLE_CORS="true"
 python -m mcp_server.main
 ```
@@ -286,10 +286,10 @@ python -m mcp_server.main --log-level WARNING
 # Docker environment variables
 docker run -d \
   -e MCP_SERVER_HOST=0.0.0.0 \
-  -e MCP_SERVER_PORT=8000 \
+  -e MCP_SERVER_PORT=8775 \
   -e MCP_ENABLE_CORS=true \
   -e MSB_SERVER_URL=http://microsandbox:5555 \
-  -p 8000:8000 \
+  -p 8775:8775 \
   mcp-server
 ```
 
@@ -385,7 +385,7 @@ Check server health and status:
 
 ```bash
 # GET request to server root returns status
-curl http://localhost:8000/
+curl http://localhost:8775/
 
 # Response includes server info and wrapper status
 {
@@ -505,12 +505,12 @@ python -m pytest mcp-server/integration_tests/test_end_to_end_functionality.py -
 python -m mcp_server.main &
 
 # Test tools/list endpoint
-curl -X POST http://localhost:8000/mcp \
+curl -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 
 # Test execute_code tool
-curl -X POST http://localhost:8000/mcp \
+curl -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -526,7 +526,7 @@ curl -X POST http://localhost:8000/mcp \
   }'
 
 # Test server status
-curl http://localhost:8000/
+curl http://localhost:8775/
 ```
 
 ## Architecture
@@ -619,7 +619,7 @@ The server handles multiple MCP requests concurrently. Monitor resource usage:
 
 ```bash
 # Monitor active sessions
-curl -X POST http://localhost:8000/mcp \
+curl -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sessions","arguments":{}}}'
 ```
@@ -644,10 +644,10 @@ curl -X POST http://localhost:8000/mcp \
 curl -s http://127.0.0.1:5555/api/v1/health
 
 # Check MCP server status
-curl http://localhost:8000/
+curl http://localhost:8775/
 
 # Test MCP protocol
-curl -X POST http://localhost:8000/mcp \
+curl -X POST http://localhost:8775/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
@@ -704,7 +704,7 @@ COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
-EXPOSE 8000
+EXPOSE 8775
 
 CMD ["python", "-m", "mcp_server.main"]
 ```
@@ -713,7 +713,7 @@ Build and run:
 
 ```bash
 docker build -t mcp-server .
-docker run -d -p 8000:8000 \
+docker run -d -p 8775:8775 \
   -e MCP_SERVER_HOST=0.0.0.0 \
   -e MSB_SERVER_URL=http://microsandbox:5555 \
   mcp-server
@@ -741,7 +741,7 @@ Type=simple
 User=mcp-server
 WorkingDirectory=/opt/mcp-server
 Environment=MCP_SERVER_HOST=127.0.0.1
-Environment=MCP_SERVER_PORT=8000
+Environment=MCP_SERVER_PORT=8775
 Environment=MSB_SERVER_URL=http://127.0.0.1:5555
 ExecStart=/opt/mcp-server/venv/bin/python -m mcp_server.main
 Restart=always
