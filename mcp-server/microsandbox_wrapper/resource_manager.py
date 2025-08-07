@@ -108,30 +108,77 @@ class ResourceManager:
         - Total memory allocation limits
         - Any other resource constraints
         
+        If limits would be exceeded, attempts LRU eviction of eligible sessions.
+        
         Args:
             flavor: The sandbox flavor being requested
             
         Returns:
-            bool: True if resources are available, False if limits would be exceeded
+            bool: True if resources are available (after eviction if needed), False if limits would still be exceeded
         """
         try:
             stats = await self.get_resource_stats()
             
-            # Check maximum concurrent sessions limit
+            # Check if we need to evict sessions due to session limit
+            sessions_to_evict = 0
             if stats.active_sessions >= self._config.max_concurrent_sessions:
-                logger.warning(
-                    f"Session limit reached: {stats.active_sessions}/{self._config.max_concurrent_sessions}"
-                )
-                return False
+                sessions_to_evict = max(sessions_to_evict, stats.active_sessions - self._config.max_concurrent_sessions + 1)
             
-            # Check total memory limit if configured
+            # Check if we need to evict sessions due to memory limit
+            memory_to_free = 0
             if self._config.max_total_memory_mb is not None:
                 required_memory = stats.total_memory_mb + flavor.get_memory_mb()
                 if required_memory > self._config.max_total_memory_mb:
+                    memory_to_free = required_memory - self._config.max_total_memory_mb
+            
+            # If we need to evict sessions, try LRU eviction (if enabled)
+            if sessions_to_evict > 0 or memory_to_free > 0:
+                if not self._config.enable_lru_eviction:
                     logger.warning(
-                        f"Memory limit would be exceeded: {required_memory}MB > {self._config.max_total_memory_mb}MB"
+                        f"Resource limits would be exceeded but LRU eviction is disabled: "
+                        f"sessions_to_evict={sessions_to_evict}, memory_to_free={memory_to_free}MB"
                     )
                     return False
+                
+                logger.info(
+                    f"Resource limits would be exceeded, attempting LRU eviction: "
+                    f"sessions_to_evict={sessions_to_evict}, memory_to_free={memory_to_free}MB"
+                )
+                
+                evicted_count = await self._evict_lru_sessions(sessions_to_evict, memory_to_free)
+                
+                if evicted_count == 0:
+                    logger.warning(
+                        f"No sessions could be evicted. Current: {stats.active_sessions} sessions, "
+                        f"{stats.total_memory_mb}MB memory"
+                    )
+                    return False
+                
+                # Re-check limits after eviction
+                updated_stats = await self.get_resource_stats()
+                
+                # Check session limit again
+                if updated_stats.active_sessions >= self._config.max_concurrent_sessions:
+                    logger.warning(
+                        f"Session limit still exceeded after eviction: "
+                        f"{updated_stats.active_sessions}/{self._config.max_concurrent_sessions}"
+                    )
+                    return False
+                
+                # Check memory limit again
+                if self._config.max_total_memory_mb is not None:
+                    required_memory = updated_stats.total_memory_mb + flavor.get_memory_mb()
+                    if required_memory > self._config.max_total_memory_mb:
+                        logger.warning(
+                            f"Memory limit still exceeded after eviction: "
+                            f"{required_memory}MB > {self._config.max_total_memory_mb}MB"
+                        )
+                        return False
+                
+                logger.info(
+                    f"Successfully evicted {evicted_count} sessions. "
+                    f"New stats: {updated_stats.active_sessions} sessions, {updated_stats.total_memory_mb}MB memory"
+                )
             
             logger.debug(
                 f"Resource check passed for {flavor.value}: "
@@ -622,6 +669,105 @@ class ResourceManager:
                 'active_sessions_count': 0,
                 'query_timestamp': time.time()
             }
+    
+    async def _evict_lru_sessions(self, min_sessions_to_evict: int, min_memory_to_free_mb: int) -> int:
+        """
+        Evict least recently used sessions to free up resources.
+        
+        This method implements LRU eviction by:
+        1. Getting all active sessions that can be evicted
+        2. Sorting them by last_accessed time (oldest first)
+        3. Evicting sessions until resource requirements are met
+        
+        Args:
+            min_sessions_to_evict: Minimum number of sessions to evict
+            min_memory_to_free_mb: Minimum amount of memory to free in MB
+            
+        Returns:
+            int: Number of sessions actually evicted
+        """
+        try:
+            logger.info(
+                f"Starting LRU eviction: min_sessions={min_sessions_to_evict}, "
+                f"min_memory_mb={min_memory_to_free_mb}"
+            )
+            
+            # Get all sessions from session manager
+            all_sessions = await self._session_manager.get_sessions()
+            
+            # Filter sessions that can be evicted and sort by last_accessed (LRU first)
+            evictable_sessions = []
+            for session_info in all_sessions:
+                # Get the actual managed session to check if it can be evicted
+                managed_session = self._session_manager._sessions.get(session_info.session_id)
+                if managed_session and managed_session.can_be_evicted():
+                    evictable_sessions.append((session_info, managed_session))
+            
+            # Sort by last_accessed time (oldest first for LRU)
+            evictable_sessions.sort(key=lambda x: x[0].last_accessed)
+            
+            logger.info(
+                f"Found {len(evictable_sessions)} evictable sessions out of {len(all_sessions)} total sessions"
+            )
+            
+            if not evictable_sessions:
+                logger.warning("No sessions available for eviction")
+                return 0
+            
+            # Evict sessions until requirements are met
+            evicted_count = 0
+            memory_freed_mb = 0
+            
+            for session_info, managed_session in evictable_sessions:
+                # Check if we've met our eviction requirements
+                if (evicted_count >= min_sessions_to_evict and 
+                    memory_freed_mb >= min_memory_to_free_mb):
+                    break
+                
+                try:
+                    logger.info(
+                        f"Evicting LRU session {session_info.session_id} "
+                        f"(last_accessed: {session_info.last_accessed}, "
+                        f"flavor: {session_info.flavor.value}, "
+                        f"status: {session_info.status.value})"
+                    )
+                    
+                    # Stop the session
+                    success = await self._session_manager.stop_session(session_info.session_id)
+                    
+                    if success:
+                        evicted_count += 1
+                        memory_freed_mb += session_info.flavor.get_memory_mb()
+                        
+                        log_resource_event(
+                            logger,
+                            "session_evicted_lru",
+                            "session",
+                            session_id=session_info.session_id,
+                            flavor=session_info.flavor.value,
+                            memory_freed_mb=session_info.flavor.get_memory_mb(),
+                            last_accessed=session_info.last_accessed.isoformat()
+                        )
+                    else:
+                        logger.warning(f"Failed to evict session {session_info.session_id}")
+                        
+                except Exception as e:
+                    logger.error(
+                        f"Error evicting session {session_info.session_id}: {e}",
+                        exc_info=True
+                    )
+                    continue
+            
+            logger.info(
+                f"LRU eviction completed: evicted {evicted_count} sessions, "
+                f"freed {memory_freed_mb}MB memory"
+            )
+            
+            return evicted_count
+            
+        except Exception as e:
+            logger.error(f"Error during LRU eviction: {e}", exc_info=True)
+            return 0
     
     async def force_orphan_cleanup(self) -> int:
         """

@@ -82,6 +82,13 @@ Configuration is handled by the `WrapperConfig` class, which provides sensible d
 - **Default**: `None` (no limit)
 - **Example**: `export MSB_MAX_TOTAL_MEMORY_MB="8192"  # 8GB`
 
+#### `MSB_ENABLE_LRU_EVICTION`
+- **Description**: Enable LRU (Least Recently Used) eviction when resource limits are reached
+- **Default**: `true`
+- **Options**: `true`, `false`, `1`, `0`, `yes`, `no`, `on`, `off`, `enabled`, `disabled`
+- **Example**: `export MSB_ENABLE_LRU_EVICTION="true"`
+- **Note**: When enabled, the system will automatically evict the least recently used sessions when `MSB_MAX_SESSIONS` or `MSB_MAX_TOTAL_MEMORY_MB` limits would be exceeded. When disabled, new session creation will fail immediately when limits are reached.
+
 #### `MSB_SHARED_VOLUME_PATH`
 - **Description**: Volume mappings between host and sandbox
 - **Default**: `[]` (no mappings)
@@ -216,6 +223,7 @@ export MSB_MAX_SESSIONS="50"
 export MSB_DEFAULT_FLAVOR="medium"
 export MSB_EXECUTION_TIMEOUT="900"
 export MSB_MAX_TOTAL_MEMORY_MB="32768"
+export MSB_ENABLE_LRU_EVICTION="true"
 export MSB_LOG_LEVEL="INFO"
 export MSB_CLEANUP_INTERVAL="60"
 export MSB_ORPHAN_CLEANUP_INTERVAL="300"
@@ -246,6 +254,7 @@ export MSB_MAX_SESSIONS="100"
 export MSB_DEFAULT_FLAVOR="large"
 export MSB_EXECUTION_TIMEOUT="3600"
 export MSB_MAX_TOTAL_MEMORY_MB="65536"
+export MSB_ENABLE_LRU_EVICTION="true"
 export MSB_SANDBOX_START_TIMEOUT="600.0"
 export MSB_CLEANUP_INTERVAL="120"
 export MSB_ORPHAN_CLEANUP_INTERVAL="600"
@@ -487,6 +496,63 @@ ResourceLimitError: Total memory limit (8192 MB) would be exceeded
 - Increase `MSB_MAX_TOTAL_MEMORY_MB`
 - Use smaller sandbox flavors
 - Reduce `MSB_MAX_SESSIONS`
+- Enable LRU eviction with `MSB_ENABLE_LRU_EVICTION=true` to automatically free resources
+
+### LRU Eviction Issues
+
+#### Sessions Not Being Evicted
+
+**Symptoms**:
+```
+WARNING - No sessions could be evicted. Current: 5 sessions, 5120MB memory
+ResourceLimitError: Session limit (5) would be exceeded
+```
+
+**Causes**:
+- All sessions are in `PROCESSING` state (actively handling requests)
+- All sessions are in `CREATING` state (still being initialized)
+- LRU eviction is disabled
+
+**Solutions**:
+- Wait for processing sessions to complete
+- Enable LRU eviction: `MSB_ENABLE_LRU_EVICTION=true`
+- Increase resource limits temporarily
+- Optimize code execution time to reduce processing duration
+
+#### Frequent Evictions
+
+**Symptoms**:
+```
+INFO - LRU eviction completed: evicted 2 sessions, freed 2048MB memory
+INFO - Evicting LRU session abc12345 (last_accessed: 2024-01-01T10:30:00)
+```
+
+**Causes**:
+- Resource limits are too low for the workload
+- Sessions are not being reused effectively
+- Large sandbox flavors consuming too much memory
+
+**Solutions**:
+- Increase `MSB_MAX_SESSIONS` and `MSB_MAX_TOTAL_MEMORY_MB`
+- Implement session reuse in your application
+- Use smaller sandbox flavors when possible
+- Monitor session usage patterns
+
+#### Unexpected Session Termination
+
+**Symptoms**:
+- Sessions disappearing unexpectedly
+- "Session not found" errors
+
+**Causes**:
+- Session was evicted due to LRU policy
+- Session exceeded timeout and was cleaned up
+
+**Solutions**:
+- Increase resource limits to reduce eviction pressure
+- Implement proper session reuse
+- Monitor session access patterns
+- Consider disabling LRU eviction if sessions must persist
 
 ### Configuration Validation
 
@@ -568,6 +634,7 @@ MSB_EXECUTION_TIMEOUT=300
 
 # Resource Configuration
 MSB_MAX_TOTAL_MEMORY_MB=
+MSB_ENABLE_LRU_EVICTION=true
 MSB_SHARED_VOLUME_PATH=[]
 
 # Cleanup Configuration

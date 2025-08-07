@@ -228,6 +228,10 @@ class MicrosandboxWrapper:
                 # Track whether this is a new session
                 session_created = session_id is None or session_id != session.session_id
                 
+                # Touch the session to update LRU ordering (if reusing existing session)
+                if not session_created:
+                    session.touch()
+                
                 # Log session event
                 log_session_event(
                     logger,
@@ -337,6 +341,10 @@ class MicrosandboxWrapper:
                 
                 # Track whether this is a new session
                 session_created = session_id is None or session_id != session.session_id
+                
+                # Touch the session to update LRU ordering (if reusing existing session)
+                if not session_created:
+                    session.touch()
                 
                 # Log session event
                 log_session_event(

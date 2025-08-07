@@ -57,11 +57,12 @@ class SessionStatus(Enum):
     Sessions progress through these states during their lifecycle,
     allowing for proper state tracking and management.
     """
-    CREATING = "creating"  # Session is being initialized
-    READY = "ready"       # Session is ready for use
-    RUNNING = "running"   # Session is currently executing code/commands
-    ERROR = "error"       # Session encountered an error
-    STOPPED = "stopped"   # Session has been terminated
+    CREATING = "creating"    # Session is being initialized
+    READY = "ready"         # Session is ready for use
+    RUNNING = "running"     # Session is currently executing code/commands
+    PROCESSING = "processing"  # Session is processing a request (cannot be evicted)
+    ERROR = "error"         # Session encountered an error
+    STOPPED = "stopped"     # Session has been terminated
 
 
 @dataclass

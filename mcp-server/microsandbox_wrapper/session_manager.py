@@ -126,7 +126,7 @@ class ManagedSession:
         ) as metrics:
             await self.ensure_started()
             self.last_accessed = datetime.now()
-            self.status = SessionStatus.RUNNING
+            self.status = SessionStatus.PROCESSING  # Mark as processing to prevent eviction
             
             log_session_event(
                 logger,
@@ -238,7 +238,7 @@ class ManagedSession:
         """
         await self.ensure_started()
         self.last_accessed = datetime.now()
-        self.status = SessionStatus.RUNNING
+        self.status = SessionStatus.PROCESSING  # Mark as processing to prevent eviction
         
         try:
             start_time = time.time()
@@ -382,6 +382,38 @@ class ManagedSession:
             )
         
         return is_expired
+    
+    def can_be_evicted(self) -> bool:
+        """
+        Check if this session can be evicted for LRU cleanup.
+        
+        A session can be evicted if:
+        1. It is not currently processing a request (status != PROCESSING)
+        2. It is not in an error state that needs investigation
+        3. It is not currently being created
+        
+        Returns:
+            bool: True if session can be safely evicted
+        """
+        # Cannot evict sessions that are currently processing requests
+        if self.status == SessionStatus.PROCESSING:
+            return False
+        
+        # Cannot evict sessions that are being created
+        if self.status == SessionStatus.CREATING:
+            return False
+        
+        # Can evict sessions in READY, RUNNING, ERROR, or STOPPED states
+        return True
+    
+    def touch(self) -> None:
+        """
+        Update the last accessed time to current time.
+        
+        This method should be called whenever the session is accessed
+        to maintain accurate LRU ordering.
+        """
+        self.last_accessed = datetime.now()
     
     async def _create_sandbox(self) -> None:
         """

@@ -48,6 +48,9 @@ class WrapperConfig:
     # Orphan cleanup configuration
     orphan_cleanup_interval: int = 600  # 10 minutes in seconds
     
+    # LRU eviction configuration
+    enable_lru_eviction: bool = True  # Enable LRU eviction when resource limits are reached
+    
     @classmethod
     def from_env(cls) -> 'WrapperConfig':
         """
@@ -69,6 +72,7 @@ class WrapperConfig:
             MSB_MAX_TOTAL_MEMORY_MB: Maximum total memory allocation in MB
             MSB_SHARED_VOLUME_PATH: Shared volume mappings (JSON array or comma-separated)
             MSB_ORPHAN_CLEANUP_INTERVAL: Orphan cleanup interval in seconds
+            MSB_ENABLE_LRU_EVICTION: Enable LRU eviction when resource limits are reached (true/false)
             
         Returns:
             WrapperConfig: Configuration instance with values from environment
@@ -96,6 +100,9 @@ class WrapperConfig:
             if os.getenv('MSB_MAX_TOTAL_MEMORY_MB'):
                 max_total_memory_mb = cls._parse_positive_int('MSB_MAX_TOTAL_MEMORY_MB', None)
             
+            # Parse LRU eviction setting
+            enable_lru_eviction = cls._parse_boolean('MSB_ENABLE_LRU_EVICTION', True)
+            
             config = cls(
                 server_url=os.getenv('MSB_SERVER_URL', 'http://127.0.0.1:5555'),
                 api_key=os.getenv('MSB_API_KEY'),
@@ -107,7 +114,8 @@ class WrapperConfig:
                 default_execution_timeout=default_execution_timeout,
                 max_total_memory_mb=max_total_memory_mb,
                 shared_volume_mappings=shared_volume_mappings,
-                orphan_cleanup_interval=orphan_cleanup_interval
+                orphan_cleanup_interval=orphan_cleanup_interval,
+                enable_lru_eviction=enable_lru_eviction
             )
             
             # Validate the complete configuration
@@ -347,6 +355,36 @@ class WrapperConfig:
             return value
         except ValueError:
             raise ConfigurationError(f"{env_var} must be a valid integer, got '{value_str}'")
+    
+    @classmethod
+    def _parse_boolean(cls, env_var: str, default: bool) -> bool:
+        """
+        Parse a boolean from environment variable.
+        
+        Args:
+            env_var: Environment variable name
+            default: Default value if not set
+            
+        Returns:
+            bool: Parsed boolean value
+            
+        Raises:
+            ConfigurationError: If value is not a valid boolean
+        """
+        value_str = os.getenv(env_var)
+        if not value_str:
+            return default
+        
+        value_str = value_str.strip().lower()
+        if value_str in ('true', '1', 'yes', 'on', 'enabled'):
+            return True
+        elif value_str in ('false', '0', 'no', 'off', 'disabled'):
+            return False
+        else:
+            raise ConfigurationError(
+                f"{env_var} must be a valid boolean value (true/false, 1/0, yes/no, on/off, enabled/disabled), "
+                f"got '{value_str}'"
+            )
     
     @classmethod
     def _parse_positive_float(cls, env_var: str, default: float) -> float:
