@@ -101,8 +101,7 @@ class ExecuteCodeParams(BaseModel):
 
 class ExecuteCommandParams(BaseModel):
     """Parameters for command execution tool."""
-    command: str = Field(description="Command to execute")
-    args: Optional[list[str]] = Field(None, description="Optional command arguments")
+    command: str = Field(description="Complete command line to execute (including arguments, pipes, redirections, etc.)")
     template: str = Field(default="python", description="Sandbox template", pattern="^(python|node)$")
     session_id: Optional[str] = Field(None, description="Optional session ID for session reuse")
     flavor: str = Field(default="small", description="Resource configuration", pattern="^(small|medium|large)$")
@@ -170,7 +169,7 @@ async def execute_command(
     params: ExecuteCommandParams,
     ctx: Context,
 ) -> str:
-    """Execute a command in a sandbox with automatic session management."""
+    """Execute a command line in a sandbox with automatic session management."""
     try:
         # Get wrapper from context
         wrapper = ctx.request_context.lifespan_context.wrapper
@@ -178,10 +177,10 @@ async def execute_command(
         # Convert flavor string to enum
         flavor = SandboxFlavor(params.flavor)
         
-        # Execute command through wrapper
+        # Execute command line through shell using wrapper
         result = await wrapper.execute_command(
-            command=params.command,
-            args=params.args,
+            command="sh",
+            args=["-c", params.command],
             template=params.template,
             session_id=params.session_id,
             flavor=flavor,
@@ -199,7 +198,7 @@ async def execute_command(
         # Add metadata information
         metadata = (
             f"\n[Session: {result.session_id}] "
-            f"[Command: {result.command} {' '.join(result.args or [])}] "
+            f"[Command: {params.command}] "
             f"[Exit Code: {result.exit_code}] "
             f"[Time: {result.execution_time_ms}ms] "
             f"[Success: {result.success}]"

@@ -58,7 +58,7 @@ The server provides standard MCP tools that can be used with any MCP-compatible 
 #### Available Tools
 
 - **execute_code**: Execute code in a sandbox
-- **execute_command**: Execute commands in a sandbox  
+- **execute_command**: Execute complete command lines with pipes, redirections, etc.
 - **get_sessions**: Get information about active sessions
 - **stop_session**: Stop a specific session
 - **get_volume_path**: Get configured volume mappings
@@ -152,7 +152,7 @@ Execute code in a sandbox with automatic session management:
 ```
 
 #### execute_command Tool
-Execute commands in a sandbox:
+Execute complete command lines with pipes, redirections, and complex shell constructs:
 
 ```json
 {
@@ -162,14 +162,19 @@ Execute commands in a sandbox:
   "params": {
     "name": "execute_command",
     "arguments": {
-      "command": "ls",
-      "args": ["-la"],
+      "command": "ls -la /tmp | grep -E '\\.(py|txt)$' | head -5",
       "template": "python",
       "session_id": "optional-session-id"
     }
   }
 }
 ```
+
+**Key features:**
+- Support for pipes (`|`), redirections (`>`, `>>`), and command chaining (`&&`, `||`)
+- Environment variables and shell expansions
+- Complex command workflows in a single call
+- Much more flexible than traditional command+args approach
 
 ### Sessions
 
