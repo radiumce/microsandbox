@@ -16,7 +16,7 @@ async def test_mcp_server_stdio():
     
     # Start the MCP server process
     server_cmd = [
-        sys.executable, "-m", "mcp_server.main_sdk", 
+        sys.executable, "-m", "mcp_server.main",
         "--transport", "stdio"
     ]
     

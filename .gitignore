@@ -20,3 +20,8 @@ libkrun.*
 .menv/
 Sandboxfile*
 tmp-build/portal
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class

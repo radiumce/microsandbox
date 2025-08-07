@@ -14,7 +14,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from mcp_server.server_sdk import create_server_app
+from mcp_server.server import create_server_app
 from microsandbox_wrapper import setup_logging
 
 
@@ -43,17 +43,17 @@ async def test_sdk_implementation():
         print("\n3. Testing tool registration...")
         # The FastMCP server stores tools internally, we can inspect the registered functions
         import inspect
-        from mcp_server import server_sdk
+        from mcp_server import server
         
         # Get all functions decorated with @mcp.tool()
         tool_functions = []
-        for name, obj in inspect.getmembers(server_sdk):
+        for name, obj in inspect.getmembers(server):
             if inspect.isfunction(obj) and hasattr(obj, '_mcp_tool'):
                 tool_functions.append(name)
         
         if not tool_functions:
             # Alternative check - look for functions that are likely tools
-            potential_tools = [name for name, obj in inspect.getmembers(server_sdk) 
+            potential_tools = [name for name, obj in inspect.getmembers(server)
                              if inspect.isfunction(obj) and name.startswith(('execute_', 'get_', 'stop_'))]
             print(f"   Found potential tool functions: {potential_tools}")
         else:
@@ -104,8 +104,8 @@ async def test_import_compatibility():
         
         # Test server module imports
         print("\n4. Testing server module imports...")
-        from mcp_server.server_sdk import create_server_app
-        from mcp_server.main_sdk import main, parse_args
+        from mcp_server.server import create_server_app
+        from mcp_server.main import main, parse_args
         print("✅ Server module imports successful")
         
         print("\n🎉 All import compatibility tests passed!")
@@ -137,8 +137,8 @@ async def main_test():
     if overall_success:
         print("🎉 ALL TESTS PASSED! SDK implementation is working correctly.")
         print("\nYou can now use the new SDK-based MCP server:")
-        print("  python -m mcp_server.main_sdk --transport stdio")
-        print("  python -m mcp_server.main_sdk --transport streamable-http --port 8000")
+        print("  python -m mcp_server.main --transport stdio")
+        print("  python -m mcp_server.main --transport streamable-http --port 8000")
     else:
         print("❌ Some tests failed. Please check the errors above.")
     print("=" * 60)

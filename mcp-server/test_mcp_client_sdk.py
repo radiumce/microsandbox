@@ -19,7 +19,7 @@ async def test_mcp_server():
     # Create server parameters for stdio connection
     server_params = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "mcp_server.main_sdk", "--transport", "stdio"],
+        args=["-m", "mcp_server.main", "--transport", "stdio"],
         env={}
     )
     

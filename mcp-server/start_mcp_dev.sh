@@ -21,11 +21,15 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Detect Python command
-if command -v python3 &> /dev/null; then
+# Detect Python command - prefer python with MCP installed
+if command -v python &> /dev/null && python -c "import mcp" 2>/dev/null; then
+    PYTHON_CMD="python"
+elif command -v python3 &> /dev/null && python3 -c "import mcp" 2>/dev/null; then
     PYTHON_CMD="python3"
 elif command -v python &> /dev/null; then
     PYTHON_CMD="python"
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
 else
     log_error "Python is not installed or not in PATH"
     exit 1
@@ -182,4 +186,4 @@ log_info "Press Ctrl+C to stop"
 
 # Change to script directory and start server
 cd "$SCRIPT_DIR"
-exec $PYTHON_CMD -m mcp_server.main_sdk --transport streamable-http --port ${MCP_SERVER_PORT}
+exec $PYTHON_CMD -m mcp_server.main --transport streamable-http --port ${MCP_SERVER_PORT}
