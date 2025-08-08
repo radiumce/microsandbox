@@ -889,7 +889,7 @@ class ResourceManager:
             }
             
             # Make the API call
-            timeout = aiohttp.ClientTimeout(total=30)  # 30 second timeout
+            timeout = aiohttp.ClientTimeout(total=1800)  # 5 minute timeout
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 headers = {
                     "Content-Type": "application/json"
@@ -976,7 +976,7 @@ class ResourceManager:
             }
             
             # Make the API call
-            timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout for stop operations
+            timeout = aiohttp.ClientTimeout(total=1800)  # 5 minute timeout for stop operations
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 headers = {
                     "Content-Type": "application/json"

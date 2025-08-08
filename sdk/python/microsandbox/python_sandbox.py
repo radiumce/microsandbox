@@ -22,7 +22,9 @@ class PythonSandbox(BaseSandbox):
         Returns:
             A string containing the Docker image name and tag
         """
-        return "microsandbox/python"
+        import os
+        # Allow override via environment variable
+        return os.environ.get("MICROSANDBOX_PYTHON_IMAGE", "microsandbox/python")
 
     async def run(self, code: str) -> Execution:
         """

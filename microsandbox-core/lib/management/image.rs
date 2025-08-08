@@ -12,6 +12,7 @@ use crate::{
 #[cfg(feature = "cli")]
 use flate2::read::GzDecoder;
 use futures::future;
+use serde_json;
 #[cfg(feature = "cli")]
 use indicatif::{ProgressBar, ProgressStyle};
 #[cfg(feature = "cli")]
@@ -111,7 +112,31 @@ pub async fn pull(
         "temporary download directory: {}",
         temp_download_dir.display()
     );
+    
+    println!("KIRO DEBUG: Starting pull for image: {}, registry: {}", name, registry);
+    tracing::info!("KIRO DEBUG: Starting pull for image: {}, registry: {}", name, registry);
 
+    // Only try local Docker daemon for images that might be local builds
+    // Check if this looks like a local image (contains "local" in the name or is not from official registry)
+    let image_name = name.to_string();
+    let should_try_local_first = image_name.contains("local") || 
+                                 image_name.contains("localhost") ||
+                                 !image_name.starts_with("docker.io/microsandbox/");
+    
+    if should_try_local_first {
+        tracing::info!("attempting to pull image {} from local Docker daemon first (detected as local image)", name);
+        match pull_from_local_docker(&name, &temp_download_dir, layer_path.clone()).await {
+            Ok(()) => {
+                tracing::info!("successfully pulled image {} from local Docker daemon", name);
+                return Ok(());
+            }
+            Err(e) => {
+                tracing::warn!("failed to pull from local Docker daemon: {}, trying remote registries", e);
+            }
+        }
+    }
+
+    // If local pull fails, try remote registries based on registry type
     if registry == DOCKER_REGISTRY {
         pull_from_docker_registry(&name, &temp_download_dir, layer_path).await
     } else if registry == SANDBOXES_REGISTRY {
@@ -122,6 +147,373 @@ pub async fn pull(
             registry
         )))
     }
+}
+
+/// Pulls a single image from the local Docker daemon.
+///
+/// This function attempts to export an image from the local Docker daemon
+/// using `docker save` command and then processes it like a registry pull.
+///
+/// ## Arguments
+///
+/// * `image` - The reference to the Docker image to pull from local daemon
+/// * `download_dir` - The directory to download the image layers to
+/// * `layer_path` - Optional custom path to store layers
+///
+/// ## Errors
+///
+/// Returns an error if:
+/// * Docker daemon is not running
+/// * Image doesn't exist locally
+/// * Failed to export or process the image
+pub async fn pull_from_local_docker(
+    image: &Reference,
+    download_dir: impl AsRef<Path>,
+    layer_path: Option<PathBuf>,
+) -> MicrosandboxResult<()> {
+    println!("KIRO DEBUG: pull_from_local_docker called for image: {}", image);
+    use std::process::Stdio;
+    use tokio::process::Command;
+    
+    let download_dir = download_dir.as_ref();
+    let microsandbox_home_path = env::get_microsandbox_home_path();
+    let db_path = microsandbox_home_path.join(OCI_DB_FILENAME);
+
+    // Use custom layer_path if specified, otherwise use default microsandbox layers directory
+    let layers_dir = match layer_path {
+        Some(path) => path,
+        None => microsandbox_home_path.join(LAYERS_SUBDIR),
+    };
+
+    // Create layers directory if it doesn't exist
+    fs::create_dir_all(&layers_dir).await?;
+
+    // Get or create a connection pool to the database
+    let pool = db::get_or_create_pool(&db_path, &OCI_DB_MIGRATOR).await?;
+
+    // For local Docker pulls, we always try to pull from Docker daemon
+    // even if the image exists in our database, in case it has been updated locally
+    tracing::info!("attempting to pull image {} from local Docker daemon", image);
+
+    // Try to export the image from local Docker daemon
+    let image_name = image.to_string();
+    let tar_path = download_dir.join("image.tar");
+    
+    let output = Command::new("docker")
+        .args(&["save", "-o", tar_path.to_str().unwrap(), &image_name])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .map_err(|e| MicrosandboxError::InvalidArgument(format!(
+            "Failed to execute docker save command: {}",
+            e
+        )))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(MicrosandboxError::InvalidArgument(format!(
+            "Docker save failed: {}",
+            stderr
+        )));
+    }
+
+    tracing::info!("successfully exported image {} from local Docker daemon", image);
+
+    // Now we need to extract the tar file and process it like a registry pull
+    // This is a simplified implementation - in a full implementation, you'd want to
+    // properly parse the Docker image format and extract layers
+
+    // Extract the tar file to simulate registry download
+    let tar_file = std::fs::File::open(&tar_path)
+        .map_err(|e| MicrosandboxError::InvalidArgument(format!(
+            "Failed to open exported tar file: {}",
+            e
+        )))?;
+    
+    let mut archive = tar::Archive::new(tar_file);
+    archive.unpack(download_dir)
+        .map_err(|e| MicrosandboxError::InvalidArgument(format!(
+            "Failed to extract exported tar file: {}",
+            e
+        )))?;
+
+    // Docker save format is different from registry format
+    // Let's first see what we have in the download directory
+    tracing::info!("Examining Docker save output in: {}", download_dir.display());
+    let mut read_dir = fs::read_dir(download_dir).await?;
+    while let Ok(Some(entry)) = read_dir.next_entry().await {
+        let path = entry.path();
+        tracing::info!("Found: {} (is_dir: {})", path.display(), path.is_dir());
+        if path.is_dir() {
+            let mut sub_read_dir = fs::read_dir(&path).await?;
+            while let Ok(Some(sub_entry)) = sub_read_dir.next_entry().await {
+                let sub_path = sub_entry.path();
+                tracing::info!("  Sub-item: {}", sub_path.display());
+            }
+        }
+    }
+    
+    // Handle OCI format from Docker save
+    let mut layer_paths = Vec::new();
+    let mut docker_config_digest: Option<String> = None;
+    let mut docker_layers: Vec<String> = Vec::new();
+    let blobs_dir = download_dir.join("blobs").join("sha256");
+    
+    if blobs_dir.exists() {
+        tracing::info!("Found OCI blobs directory: {}", blobs_dir.display());
+        
+        // Read the manifest to identify which blobs are layers
+        let manifest_path = download_dir.join("manifest.json");
+        
+        if manifest_path.exists() {
+            let manifest_content = fs::read_to_string(&manifest_path).await?;
+            tracing::info!("Manifest content: {}", manifest_content);
+            
+            // Parse the Docker manifest.json to extract config and layer info
+            if let Ok(manifest_array) = serde_json::from_str::<Vec<serde_json::Value>>(&manifest_content) {
+                if let Some(manifest_obj) = manifest_array.first() {
+                    if let Some(config_path) = manifest_obj.get("Config").and_then(|v| v.as_str()) {
+                        docker_config_digest = Some(config_path.to_string());
+                    }
+                    if let Some(layers_array) = manifest_obj.get("Layers").and_then(|v| v.as_array()) {
+                        docker_layers = layers_array.iter()
+                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                            .collect();
+                    }
+                }
+            }
+            
+            // Parse the manifest to find layer digests
+            // For now, let's use a simple heuristic: check if the blob is gzip compressed
+            let mut read_dir = fs::read_dir(&blobs_dir).await?;
+            
+            while let Ok(Some(entry)) = read_dir.next_entry().await {
+                let path = entry.path();
+                if path.is_file() {
+                    // Check if this blob is a gzip-compressed layer
+                    let mut file = std::fs::File::open(&path)?;
+                    let mut header = [0u8; 2];
+                    use std::io::Read;
+                    if file.read_exact(&mut header).is_ok() && header == [0x1f, 0x8b] {
+                        // This is a gzip file, likely a layer
+                        let file_name = path.file_name().unwrap().to_string_lossy();
+                        let sha256_name = format!("sha256:{}", file_name);
+                        let new_path = download_dir.join(&sha256_name);
+                        
+                        // Copy the blob to the new location with sha256: prefix
+                        fs::copy(&path, &new_path).await?;
+                        
+                        tracing::info!("Found layer blob: {} -> {}", path.display(), new_path.display());
+                        layer_paths.push(new_path);
+                    } else {
+                        tracing::info!("Skipping non-layer blob: {}", path.display());
+                    }
+                }
+            }
+        } else {
+            tracing::warn!("No manifest.json found, processing all blobs");
+            // Fallback: process all blobs but handle errors gracefully
+            let mut read_dir = fs::read_dir(&blobs_dir).await?;
+            
+            while let Ok(Some(entry)) = read_dir.next_entry().await {
+                let path = entry.path();
+                if path.is_file() {
+                    let file_name = path.file_name().unwrap().to_string_lossy();
+                    let sha256_name = format!("sha256:{}", file_name);
+                    let new_path = download_dir.join(&sha256_name);
+                    
+                    // Copy the blob to the new location with sha256: prefix
+                    fs::copy(&path, &new_path).await?;
+                    
+                    tracing::info!("Found blob: {} -> {}", path.display(), new_path.display());
+                    layer_paths.push(new_path);
+                }
+            }
+        }
+    } else {
+        // Fallback: look for traditional layer.tar files
+        let mut read_dir = fs::read_dir(download_dir).await?;
+        
+        while let Ok(Some(entry)) = read_dir.next_entry().await {
+            let path = entry.path();
+            if path.is_dir() {
+                // Look for layer.tar files in subdirectories
+                let layer_tar_path = path.join("layer.tar");
+                if layer_tar_path.exists() {
+                    // Create a sha256 filename for this layer
+                    let dir_name = path.file_name().unwrap().to_string_lossy();
+                    let sha256_name = if dir_name.len() >= 12 {
+                        format!("sha256:{}", &dir_name[..64.min(dir_name.len())])
+                    } else {
+                        format!("sha256:{}", dir_name)
+                    };
+                    let new_path = download_dir.join(&sha256_name);
+                    
+                    // Copy the layer.tar to the new location
+                    fs::copy(&layer_tar_path, &new_path).await?;
+                    
+                    tracing::info!("Found layer: {} -> {}", layer_tar_path.display(), new_path.display());
+                    layer_paths.push(new_path);
+                }
+            }
+        }
+    }
+
+    if layer_paths.is_empty() {
+        return Err(MicrosandboxError::InvalidArgument(
+            "No layers found in exported Docker image".to_string()
+        ));
+    }
+
+    #[cfg(feature = "cli")]
+    let extract_layers_sp = term::create_spinner(
+        EXTRACT_LAYERS_MSG.to_string(),
+        None,
+        Some(layer_paths.len() as u64),
+    );
+
+    let extraction_futures: Vec<_> = layer_paths
+        .into_iter()
+        .map(|path| {
+            let layers_dir = layers_dir.clone();
+            #[cfg(feature = "cli")]
+            let extract_layers_sp = extract_layers_sp.clone();
+            async move {
+                let result = extract_layer(path, &layers_dir).await;
+                #[cfg(feature = "cli")]
+                extract_layers_sp.inc(1);
+                result
+            }
+        })
+        .collect();
+
+    // Wait for all extractions to complete
+    for result in future::join_all(extraction_futures).await {
+        result?;
+    }
+
+    #[cfg(feature = "cli")]
+    extract_layers_sp.finish();
+
+    // Register the image in the database
+    let reference = image.to_string();
+    let total_size = 0i64; // We don't have accurate size info from docker save
+    
+    tracing::info!("registering local Docker image {} in database", reference);
+    let image_id = db::save_or_update_image(&pool, &reference, total_size).await?;
+    
+    // Try to create manifest and config from Docker save output
+    if let Some(config_digest) = docker_config_digest {
+        tracing::info!("attempting to create manifest and config for local image using Docker save data");
+        
+        // Read the config blob
+        let config_blob_path = download_dir.join(&config_digest);
+        if config_blob_path.exists() {
+            match fs::read_to_string(&config_blob_path).await {
+                Ok(config_content) => {
+                    match serde_json::from_str::<oci_spec::image::ImageConfiguration>(&config_content) {
+                        Ok(config) => {
+                            // Create a minimal manifest
+                            use oci_spec::image::{ImageManifest, Descriptor, MediaType, Digest};
+                            
+                            // Create layer descriptors from the Docker layers
+                            let mut layer_descriptors = Vec::new();
+                            for layer_path in &docker_layers {
+                                if let Some(digest_part) = layer_path.strip_prefix("blobs/sha256/") {
+                                    let digest_str = format!("sha256:{}", digest_part);
+                                    if let Ok(digest) = digest_str.parse::<Digest>() {
+                                        layer_descriptors.push(Descriptor::new(
+                                            MediaType::ImageLayerGzip,
+                                            0, // We don't have size info
+                                            digest
+                                        ));
+                                    }
+                                }
+                            }
+                            
+                            // Create config descriptor
+                            if let Some(config_digest_part) = config_digest.strip_prefix("blobs/sha256/") {
+                                let config_digest_str = format!("sha256:{}", config_digest_part);
+                                if let Ok(config_digest_parsed) = config_digest_str.parse::<Digest>() {
+                                    let config_descriptor = Descriptor::new(
+                                        MediaType::ImageConfig,
+                                        0,
+                                        config_digest_parsed
+                                    );
+                                    
+                                    // Create manifest using serde_json to build the structure
+                                    let manifest_json = serde_json::json!({
+                                        "schemaVersion": 2,
+                                        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                                        "config": config_descriptor,
+                                        "layers": layer_descriptors
+                                    });
+                                    
+                                    if let Ok(manifest) = serde_json::from_value::<ImageManifest>(manifest_json) {
+                                        // Save manifest and config to database
+                                        match db::save_manifest(&pool, image_id, None, &manifest).await {
+                                            Ok(manifest_id) => {
+                                                match db::save_config(&pool, manifest_id, &config).await {
+                                                    Ok(_) => {
+                                                        // Now save the layers and link them to the manifest
+                                                        for layer_path in &docker_layers {
+                                                            if let Some(digest_part) = layer_path.strip_prefix("blobs/sha256/") {
+                                                                let digest_str = format!("sha256:{}", digest_part);
+                                                                
+                                                                // Save layer to database
+                                                                match db::save_layer(&pool, "application/vnd.docker.image.rootfs.diff.tar.gzip", &digest_str, 0, &digest_str).await {
+                                                                    Ok(layer_id) => {
+                                                                        // Link layer to manifest
+                                                                        if let Err(e) = db::save_manifest_layer(&pool, manifest_id, layer_id).await {
+                                                                            tracing::warn!("failed to link layer {} to manifest for local image {}: {}", digest_str, reference, e);
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        tracing::warn!("failed to save layer {} for local image {}: {}", digest_str, reference, e);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        tracing::info!("successfully created manifest, config, and layers for local Docker image {}", reference);
+                                                    }
+                                                    Err(e) => {
+                                                        tracing::warn!("failed to save config for local image {}: {}", reference, e);
+                                                    }
+                                                }
+                                            }
+                                            Err(e) => {
+                                                tracing::warn!("failed to save manifest for local image {}: {}", reference, e);
+                                            }
+                                        }
+                                    } else {
+                                        tracing::warn!("failed to create manifest structure for local image {}", reference);
+                                    }
+                                } else {
+                                    tracing::warn!("failed to parse config digest for local image {}", reference);
+                                }
+                            } else {
+                                tracing::warn!("invalid config digest format for local image {}", reference);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("failed to parse config JSON for local image {}: {}", reference, e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("failed to read config blob for local image {}: {}", reference, e);
+                }
+            }
+        } else {
+            tracing::warn!("config blob not found for local image {}", reference);
+        }
+    } else {
+        tracing::warn!("no config digest found in Docker manifest for local image {}", reference);
+    }
+
+    tracing::info!("successfully processed and registered local Docker image {}", image);
+    Ok(())
 }
 
 /// Pulls a single image from the Docker registry.

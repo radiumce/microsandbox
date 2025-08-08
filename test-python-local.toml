@@ -1,0 +1,6 @@
+[sandbox]
+name = "test-python-local"
+image = "microsandbox/python-local:latest"
+
+[sandbox.exec]
+command = ["python", "--version"]

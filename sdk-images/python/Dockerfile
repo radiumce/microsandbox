@@ -14,7 +14,7 @@ COPY . .
 RUN cargo build --release --bin portal --features python
 
 # Second stage: Create the Python image
-FROM python:latest
+FROM python:3.12
 
 # Set environment variables and create user
 ENV PYTHONUNBUFFERED=1 \
@@ -41,7 +41,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chown -R $USER_NAME:$USER_GID /home/$USER_NAME \
     && mkdir -p /etc/microsandbox/portal \
     && chown -R $USER_NAME:$USER_GID /etc/microsandbox \
-    # Install core Python packages
+    # Fix pip installation and install core Python packages
+    && python -m ensurepip --upgrade \
     && pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir \
         black \

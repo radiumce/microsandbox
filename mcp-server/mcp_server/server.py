@@ -105,7 +105,7 @@ class ExecuteCommandParams(BaseModel):
     template: str = Field(default="python", description="Sandbox template", pattern="^(python|node)$")
     session_id: Optional[str] = Field(None, description="Optional session ID for session reuse")
     flavor: str = Field(default="small", description="Resource configuration", pattern="^(small|medium|large)$")
-    timeout: Optional[int] = Field(None, description="Execution timeout in seconds", ge=1, le=300)
+    timeout: Optional[int] = Field(None, description="Execution timeout in seconds", ge=1, le=1800)
 
 
 class GetSessionsParams(BaseModel):
